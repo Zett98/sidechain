@@ -16,8 +16,8 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 RUN su node -c "sudo npm install -g --unsafe-perm esy"
 
 # Install LIGO
-RUN wget https://ligolang.org/deb/ligo.deb && sudo apt install ./ligo.deb
+RUN chmod +x /workspaces/sidechain/.devcontainer/tools/ligo && sudo cp /workspaces/sidechain/.devcontainer/tools/ligo /usr/local/bin
 
-# Download mainnet docker script (docker in docker... should I be using docker compose?)
-RUN wget -O mainnet.sh https://gitlab.com/tezos/tezos/raw/latest-release/scripts/tezos-docker-manager.sh && chmod +x mainnet.sh
+# Download mainnet docker script (commented out because it requires docker-in-docker)
+# RUN wget -O mainnet.sh https://gitlab.com/tezos/tezos/raw/latest-release/scripts/tezos-docker-manager.sh && chmod +x mainnet.sh
 
