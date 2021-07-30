@@ -24,7 +24,7 @@ Included in this devcontainer:
    /mainnet.sh clear
    # Clear anything it's already downloaded
 
-   /mainnet.sh snapshot import /full/path/to/snapshot && /mainnet.sh client bootstrapped 
+   /mainnet.sh snapshot import /full/path/to/snapshot && /mainnet.sh client start && /mainnet.sh client bootstrapped 
    # Import the snapshot and then finish bootstrapping
    # This will take a moment, so get a coffee
    ```
