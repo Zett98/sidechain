@@ -13,7 +13,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 # RUN su node -c "source /usr/local/share/nvm/nvm.sh && nvm install ${EXTRA_NODE_VERSION}"
 
 # Install esy
-RUN su node -c "sudo npm install -g --unsafe-perm esy"
+RUN su node -c "sudo npm install -g --unsafe-perm @esy-nightly/esy"
 
 # Install LIGO
 COPY tools/* /tmp/tools/
