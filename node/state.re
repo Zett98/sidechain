@@ -13,6 +13,7 @@ module Uri_map = Map.Make(Uri);
 
 type t = {
   identity,
+  interop_context: Tezos_interop.Context.t,
   data_folder: string,
   pending_side_ops: list(Operation.Side_chain.t),
   pending_main_ops: list(Operation.Main_chain.t),
@@ -28,7 +29,8 @@ type t = {
   validators_uri: Address_map.t(Uri.t),
 };
 
-let make = (~identity, ~data_folder, ~initial_validators_uri) => {
+let make =
+    (~identity, ~interop_context, ~data_folder, ~initial_validators_uri) => {
   let initial_block = Block.genesis;
   let initial_protocol = Protocol.make(~initial_block);
   let initial_signatures =
@@ -43,6 +45,7 @@ let make = (~identity, ~data_folder, ~initial_validators_uri) => {
   };
   {
     identity,
+    interop_context,
     data_folder,
     pending_side_ops: [],
     pending_main_ops: [],
@@ -55,7 +58,54 @@ let make = (~identity, ~data_folder, ~initial_validators_uri) => {
   };
 };
 
+let commit_state_hash = state =>
+  Tezos_interop.Consensus.commit_state_hash(~context=state.interop_context);
+let try_to_commit_state_hash = (~old_state, state, block, signatures) => {
+  let signatures_map =
+    signatures
+    |> Signatures.to_list
+    |> List.map(Signature.signature_to_tezos_signature_by_address)
+    |> List.to_seq
+    |> Address_map.of_seq;
+
+  let validators =
+    state.protocol.validators
+    |> Validators.to_list
+    |> List.map(validator =>
+         Tezos_interop.Key.Ed25519(validator.Validators.address)
+       );
+  let signatures =
+    old_state.protocol.validators
+    |> Validators.to_list
+    |> List.map(validator => validator.Validators.address)
+    |> List.map(address =>
+         (
+           Tezos_interop.Key.Ed25519(address),
+           Address_map.find_opt(address, signatures_map),
+         )
+       );
+
+  Lwt.async(() => {
+    /* TODO: solve this magic number
+       the goal here is to prevent a bunch of nodes concurrently trying
+       to update the state root hash */
+    let.await () =
+      state.identity.t == block.Block.author
+        ? Lwt.return_unit : Lwt_unix.sleep(120.0);
+    commit_state_hash(
+      state,
+      ~block_hash=block.hash,
+      ~block_height=block.block_height,
+      ~block_payload_hash=block.payload_hash,
+      ~handles_hash=block.handles_hash,
+      ~state_hash=block.state_root_hash,
+      ~validators,
+      ~signatures,
+    );
+  });
+};
 let apply_block = (state, block) => {
+  let old_state = state;
   let.ok (protocol, new_snapshot) = apply_block(state.protocol, block);
   let state = {...state, protocol};
   Lwt.async(() =>
@@ -71,6 +121,11 @@ let apply_block = (state, block) => {
   );
   switch (new_snapshot) {
   | Some(new_snapshot) =>
+    switch (Block_pool.find_signatures(~hash=block.hash, state.block_pool)) {
+    | Some(signatures) when Signatures.is_self_signed(signatures) =>
+      try_to_commit_state_hash(~old_state, state, block, signatures)
+    | _ => ()
+    };
     let snapshots =
       Snapshots.update(
         ~new_snapshot,

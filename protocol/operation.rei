@@ -1,11 +1,16 @@
 open Helpers;
 module Main_chain: {
-  [@deriving (ord, yojson)]
+  [@deriving yojson]
   type kind =
     // TODO: can a validator uses the same key in different nodes?
     // If so the ordering in the list must never use the same key two times in sequence
     | Add_validator(Validators.validator)
-    | Remove_validator(Validators.validator);
+    | Remove_validator(Validators.validator)
+    | Deposit({
+        destination: Wallet.t,
+        amount: Amount.t,
+        ticket: Ticket.t,
+      });
 
   [@deriving (ord, yojson)]
   type t =
@@ -19,9 +24,10 @@ module Main_chain: {
 
 module Side_chain: {
   // TODO: I don't like this structure model
-  [@deriving (ord, yojson)]
+  [@deriving yojson]
   type kind =
-    | Transaction({destination: Wallet.t});
+    | Transaction({destination: Wallet.t})
+    | Withdraw({owner: Tezos_interop.Address.t});
   [@deriving (ord, yojson)]
   type t =
     pri {
@@ -31,6 +37,7 @@ module Side_chain: {
       block_height: int64,
       source: Wallet.t,
       amount: Amount.t,
+      ticket: Ticket.t,
       kind,
     };
 
@@ -41,6 +48,7 @@ module Side_chain: {
       ~block_height: int64,
       ~source: Wallet.t,
       ~amount: Amount.t,
+      ~ticket: Ticket.t,
       ~kind: kind
     ) =>
     t;
@@ -53,6 +61,7 @@ module Side_chain: {
       ~block_height: int64,
       ~source: Wallet.t,
       ~amount: Amount.t,
+      ~ticket: Ticket.t,
       ~kind: kind
     ) =>
     result(t, string);

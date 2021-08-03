@@ -339,6 +339,7 @@ describe("consensus", ({test, _}) => {
 
   let hash_exn = s => BLAKE2B.of_string(s) |> Option.get;
   let key_exn = s => Key.of_string(s) |> Option.get;
+  let address_exn = s => Address.of_string(s) |> Option.get;
 
   test("hash_validators", ({expect, _}) => {
     let hash =
@@ -356,14 +357,18 @@ describe("consensus", ({test, _}) => {
   test("hash_block", ({expect, _}) => {
     let hash =
       hash_block(
-        ~block_height=179842L,
+        ~block_height=121L,
         ~block_payload_hash=
           hash_exn(
-            "e2b8630f4dbda366f4c5e781e9c421780580566c2b7076f9cff142e58cbad972",
+            "2d92960a592c56de3046e200969c230a2eda71fc4b775e0cc09a189e5ddc5dbd",
           ),
         ~state_root_hash=
           hash_exn(
-            "7b54374657fc7b0e681ee618d4a13129b2d0c47e8ffb0460f02ac8d324c0b134",
+            "bdd051ddb07925a0d88dc27583e38ae560aa1b4429cc93b9ec35dacdbd74ffb2",
+          ),
+        ~handles_hash=
+          hash_exn(
+            "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
           ),
         ~validators_hash=
           hash_exn(
@@ -372,7 +377,21 @@ describe("consensus", ({test, _}) => {
       );
     let hash = BLAKE2B.to_string(hash);
     expect.string(hash).toEqual(
-      "58b39faab167d45a69a0cf126bade7fd23932b2c48684adfbd164281ca2cc5ff",
+      "7cb600c19817b899d4c28c521dd9ebf95f688e1444afe7d0e7740bebe848b030",
+    );
+  });
+  test("hash_withdraw_handle", ({expect, _}) => {
+    let hash =
+      hash_withdraw_handle(
+        ~id=Z.of_int(0),
+        ~owner=address_exn("tz1YywYq77UAMbVgoYndnZLkRawjUhX3nVh4"),
+        ~amount=Z.of_int(10),
+        ~ticketer=address_exn("KT1AS9rCk1wpybsvZ5Tnd4yRxDvtN39uxMoq"),
+        ~data=Bytes.of_string(""),
+      );
+    let hash = BLAKE2B.to_string(hash);
+    expect.string(hash).toEqual(
+      "63dfd90ec7be98a9c23bf374692de4d36f41fe03c4c768fc0c650641d3ed4f86",
     );
   });
 });

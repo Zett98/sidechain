@@ -36,6 +36,9 @@ module Signature: {
 
   let to_string: t => string;
   let of_string: string => option(t);
+
+  // TODO: this is a leaky abstraction
+  let of_raw_string: [ | `Ed25519(string)] => t;
 };
 
 module Contract_hash: {
@@ -52,6 +55,9 @@ module Address: {
 
   let to_string: t => string;
   let of_string: string => option(t);
+
+  let to_yojson: t => Yojson.Safe.t;
+  let of_yojson: Yojson.Safe.t => result(t, string);
 };
 
 module Ticket: {
@@ -77,6 +83,14 @@ module Pack: {
   let to_bytes: t => bytes;
 };
 
+module Context: {
+  type t = {
+    rpc_node: Uri.t,
+    secret: Secret.t,
+    consensus_contract: Address.t,
+    required_confirmations: int,
+  };
+};
 module Consensus: {
   let hash_validators: list(Key.t) => BLAKE2B.t;
   let hash_block:
@@ -84,9 +98,33 @@ module Consensus: {
       ~block_height: int64,
       ~block_payload_hash: BLAKE2B.t,
       ~state_root_hash: BLAKE2B.t,
+      ~handles_hash: BLAKE2B.t,
       ~validators_hash: BLAKE2B.t
     ) =>
     BLAKE2B.t;
+  let hash_withdraw_handle:
+    (
+      ~id: Z.t,
+      ~owner: Address.t,
+      ~amount: Z.t,
+      ~ticketer: Address.t,
+      ~data: bytes
+    ) =>
+    BLAKE2B.t;
+
+  /** ~signatures should be in the same order as the old validators */
+  let commit_state_hash:
+    (
+      ~context: Context.t,
+      ~block_hash: BLAKE2B.t,
+      ~block_height: int64,
+      ~block_payload_hash: BLAKE2B.t,
+      ~state_hash: BLAKE2B.t,
+      ~handles_hash: BLAKE2B.t,
+      ~validators: list(Key.t),
+      ~signatures: list((Key.t, option(Signature.t)))
+    ) =>
+    Lwt.t(unit);
 };
 
 module Discovery: {let sign: (Secret.t, ~nonce: int64, Uri.t) => Signature.t;};

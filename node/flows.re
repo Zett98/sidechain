@@ -118,8 +118,9 @@ let rec request_protocol_snapshot = tries => {
 };
 Lwt.async_exception_hook :=
   (
-    _exn => {
-      print_endline("global exception");
+    exn => {
+      Printexc.to_string(exn) |> Format.eprintf("global_exception: %s\n%!");
+      Printexc.print_backtrace(stderr);
     }
   );
 let pending = ref(false);
@@ -313,6 +314,10 @@ let received_operation =
 
 let find_block_by_hash = (state, hash) =>
   Block_pool.find_block(~hash, state.Node.block_pool);
+
+let find_block_level = state => {
+  state.State.protocol.block_height;
+};
 
 let request_nonce = (state, update_state, uri) => {
   // TODO: nonce size, think about this, 32 is just magic because of SHA256

@@ -46,8 +46,14 @@ let handle_request =
       | Ok(response) =>
         let response = E.response_to_yojson(response);
         await(Response.of_json(~status=`OK, response));
-      | Error(_err) =>
-        await(Response.make(~status=`Internal_server_error, ()))
+      | Error(err) =>
+        switch (err) {
+        | `Not_a_json => print_endline("Invalid json")
+        | `Not_a_valid_request(err) =>
+          print_endline("Invalid request:" ++ err)
+        | _ => print_endline("unhandled")
+        };
+        await(Response.make(~status=`Internal_server_error, ()));
       };
     },
   );
@@ -95,6 +101,12 @@ let handle_block_by_hash =
       Ok(block);
     },
   );
+
+let handle_block_level =
+  handle_request((module Block_level), (_update_state, _request) => {
+    Ok({level: Flows.find_block_level(Server.get_state())})
+  });
+
 let handle_protocol_snapshot =
   handle_request(
     (module Protocol_snapshot),
@@ -152,6 +164,7 @@ let handle_data_to_smart_contract =
         block_height: block.block_height,
         block_payload_hash: block.payload_hash,
         state_hash: block.state_root_hash,
+        handles_hash: block.handles_hash,
         validators,
         signatures,
       });
@@ -165,55 +178,14 @@ let handle_receive_operation_gossip =
       Ok();
     },
   );
-module Utils = {
-  let read_file = file => {
-    let.await lines =
-      Lwt_io.with_file(~mode=Input, file, ic =>
-        Lwt_io.read_lines(ic) |> Lwt_stream.to_list
-      );
-    await(lines |> String.concat("\n"));
-  };
-
-  let read_identity_file = folder => {
-    let.await file_buffer = read_file(folder ++ "/identity.json");
-    await(
-      try({
-        let json = Yojson.Safe.from_string(file_buffer);
-        State.identity_of_yojson(json);
-      }) {
-      | _ => Error("failed to parse json")
-      },
-    );
-  };
-  // TODO: write only file system signed by identity key and in binary identity key
-  let read_validators = folder => {
-    let.await file_buffer = read_file(folder ++ "/validators.json");
-    await(
-      try({
-        let json = Yojson.Safe.from_string(file_buffer);
-        module T = {
-          [@deriving of_yojson]
-          type t = {
-            address: Address.t,
-            uri: Uri.t,
-          };
-        };
-        let.ok validators = [%of_yojson: list(T.t)](json);
-        Ok(List.map((T.{address, uri}) => (address, uri), validators));
-      }) {
-      | _ => Error("failed to parse json")
-      },
-    );
-  };
-};
 
 let node = {
-  open Utils;
   let folder = Sys.argv[1];
-  let.await identity = read_identity_file(folder);
-  let identity = Result.get_ok(identity);
-  let.await validators = read_validators(folder);
-  let validators = Result.get_ok(validators);
+  let.await identity = Files.Identity.read(~file=folder ++ "/identity.json");
+  let.await validators =
+    Files.Validators.read(~file=folder ++ "/validators.json");
+  let.await interop_context =
+    Files.Interop_context.read(~file=folder ++ "/tezos.json");
   let initial_validators_uri =
     List.fold_left(
       (validators_uri, (address, uri)) =>
@@ -222,7 +194,12 @@ let node = {
       validators,
     );
   let node =
-    State.make(~identity, ~data_folder=folder, ~initial_validators_uri);
+    State.make(
+      ~identity,
+      ~interop_context,
+      ~data_folder=folder,
+      ~initial_validators_uri,
+    );
   let node = {
     ...node,
     protocol: {
@@ -254,6 +231,7 @@ let () = Node.Server.start(~initial=node);
 let _server =
   App.empty
   |> App.port(Node.Server.get_port() |> Option.get)
+  |> handle_block_level
   |> handle_received_block_and_signature
   |> handle_received_signature
   |> handle_block_by_hash
