@@ -7,10 +7,7 @@ describe("protocol state", ({test, _}) => {
     let (key_wallet, wallet) = Wallet.make_wallet();
     let state = {
       ...make(~initial_block=Block.genesis),
-      ledger:
-        Ledger.empty
-        |> Ledger.deposit(~destination=wallet, ~amount=Amount.of_int(1000))
-        |> Ledger.unfreeze(~wallet, ~amount=Amount.of_int(500)),
+      ledger: Ledger.empty |> Ledger.deposit(wallet, Amount.of_int(500)),
     };
     let validators = {
       open Helpers;
@@ -42,15 +39,7 @@ describe("protocol state", ({test, _}) => {
       );
     apply_block(state, block);
   };
-  let test_wallet_offset =
-      (
-        name,
-        ~free_diff_a=0,
-        ~frozen_diff_a=0,
-        ~free_diff_b=0,
-        ~frozen_diff_b=0,
-        f,
-      ) =>
+  let test_wallet_offset = (name, ~free_diff_a=0, ~free_diff_b=0, f) =>
     test(
       name,
       ({expect, _}) => {
@@ -61,27 +50,17 @@ describe("protocol state", ({test, _}) => {
         let (key_b, wallet_b) = Wallet.make_wallet();
         let new_state = f(old_state, (wallet_a, key_a), (wallet_b, key_b));
 
-        expect_amount(Ledger.get_free(wallet_a, old_state.ledger), 500);
-        expect_amount(Ledger.get_frozen(wallet_a, old_state.ledger), 500);
-        expect_amount(Ledger.get_free(wallet_b, old_state.ledger), 0);
-        expect_amount(Ledger.get_frozen(wallet_b, old_state.ledger), 0);
+        expect_amount(Ledger.balance(wallet_a, old_state.ledger), 500);
+        expect_amount(Ledger.balance(wallet_b, old_state.ledger), 0);
 
         // TODO: test that it changes only the target wallet
         expect_amount(
-          Ledger.get_free(wallet_a, new_state.ledger),
+          Ledger.balance(wallet_a, new_state.ledger),
           500 + free_diff_a,
         );
         expect_amount(
-          Ledger.get_frozen(wallet_a, new_state.ledger),
-          500 + frozen_diff_a,
-        );
-        expect_amount(
-          Ledger.get_free(wallet_b, new_state.ledger),
+          Ledger.balance(wallet_b, new_state.ledger),
           0 + free_diff_b,
-        );
-        expect_amount(
-          Ledger.get_frozen(wallet_b, new_state.ledger),
-          0 + frozen_diff_b,
         );
       },
     );
@@ -102,36 +81,32 @@ describe("protocol state", ({test, _}) => {
     "transaction",
     ~free_diff_a=-7,
     ~free_diff_b=7,
-    (state, (source, key), (destination, _)) => {
+    (state, (source, secret), (destination, _)) => {
     apply_side_chain(
       state,
-      Operation.self_sign_side(
-        ~key,
-        Operation.Side_chain.make(
-          ~nonce=0l,
-          ~block_height=0L,
-          ~source,
-          ~amount=Amount.of_int(7),
-          ~kind=Transaction({destination: destination}),
-        ),
+      Operation.Side_chain.sign(
+        ~secret,
+        ~nonce=0l,
+        ~block_height=0L,
+        ~source,
+        ~amount=Amount.of_int(7),
+        ~kind=Transaction({destination: destination}),
       ),
     )
   });
   test_failed_wallet_offset(
     "transaction",
     "not enough funds",
-    (state, (source, key), (destination, _)) =>
+    (state, (source, secret), (destination, _)) =>
     apply_side_chain(
       state,
-      Operation.self_sign_side(
-        ~key,
-        Operation.Side_chain.make(
-          ~nonce=0l,
-          ~block_height=0L,
-          ~source,
-          ~amount=Amount.of_int(501),
-          ~kind=Transaction({destination: destination}),
-        ),
+      Operation.Side_chain.sign(
+        ~secret,
+        ~nonce=0l,
+        ~block_height=0L,
+        ~source,
+        ~amount=Amount.of_int(501),
+        ~kind=Transaction({destination: destination}),
       ),
     )
   );
@@ -142,21 +117,17 @@ describe("protocol state", ({test, _}) => {
     expect.option(Validators.current(validators)).toBeNone();
     expect.list(Validators.to_list(validators)).toBeEmpty();
     let new_validator = Validators.{address: Address.make_pubkey()};
+    let main_op = kind =>
+      Operation.Main_chain.make(~tezos_hash=Helpers.BLAKE2B.hash(""), ~kind);
     let state =
-      apply_main_chain(
-        state,
-        Operation.Main_chain.Add_validator(new_validator),
-      );
+      apply_main_chain(state, main_op(Add_validator(new_validator)));
     let validators = state.validators;
     expect.bool(Validators.current(validators) == Some(new_validator)).
       toBeTrue();
     expect.list(Validators.to_list(validators)).toEqual([new_validator]);
     // duplicated is a noop
     let state =
-      apply_main_chain(
-        state,
-        Operation.Main_chain.Add_validator(new_validator),
-      );
+      apply_main_chain(state, main_op(Add_validator(new_validator)));
     let validators = state.validators;
     expect.bool(Validators.current(validators) == Some(new_validator)).
       toBeTrue();
@@ -164,10 +135,7 @@ describe("protocol state", ({test, _}) => {
     // additional shouldn't move current
     let another_validator = Validators.{address: Address.make_pubkey()};
     let state =
-      apply_main_chain(
-        state,
-        Operation.Main_chain.Add_validator(another_validator),
-      );
+      apply_main_chain(state, main_op(Add_validator(another_validator)));
     let validators = state.validators;
     expect.bool(Validators.current(validators) == Some(new_validator)).
       toBeTrue();
@@ -186,10 +154,7 @@ describe("protocol state", ({test, _}) => {
     // ]);
     // remove current validator
     let state =
-      apply_main_chain(
-        state,
-        Operation.Main_chain.Remove_validator(another_validator),
-      );
+      apply_main_chain(state, main_op(Remove_validator(another_validator)));
     let validators = state.validators;
     expect.bool(Validators.current(validators) == Some(new_validator)).
       toBeTrue();
@@ -202,10 +167,7 @@ describe("protocol state", ({test, _}) => {
     // expect.list(Validators.validators(validators)).toEqual([new_validator]);
     // remove all validators
     let state =
-      apply_main_chain(
-        state,
-        Operation.Main_chain.Remove_validator(new_validator),
-      );
+      apply_main_chain(state, main_op(Remove_validator(new_validator)));
     let validators = state.validators;
     expect.option(Validators.current(validators)).toBeNone();
     expect.list(Validators.to_list(validators)).toBeEmpty();

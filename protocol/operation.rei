@@ -1,11 +1,20 @@
 open Helpers;
 module Main_chain: {
   [@deriving (ord, yojson)]
-  type t =
+  type kind =
     // TODO: can a validator uses the same key in different nodes?
     // If so the ordering in the list must never use the same key two times in sequence
     | Add_validator(Validators.validator)
     | Remove_validator(Validators.validator);
+
+  [@deriving (ord, yojson)]
+  type t =
+    pri {
+      tezos_hash: BLAKE2B.t,
+      kind,
+    };
+
+  let make: (~tezos_hash: BLAKE2B.t, ~kind: kind) => t;
 };
 
 module Side_chain: {
@@ -17,6 +26,7 @@ module Side_chain: {
   type t =
     pri {
       hash: BLAKE2B.t,
+      signature: Signature.t,
       nonce: int32,
       block_height: int64,
       source: Wallet.t,
@@ -24,8 +34,9 @@ module Side_chain: {
       kind,
     };
 
-  let make:
+  let sign:
     (
+      ~secret: Address.key,
       ~nonce: int32,
       ~block_height: int64,
       ~source: Wallet.t,
@@ -34,9 +45,15 @@ module Side_chain: {
     ) =>
     t;
 
-  // TODO: maybe use GADT for this?
-  module Self_signed: Signed.S with type data = t;
+  let verify:
+    (
+      ~hash: BLAKE2B.t,
+      ~signature: Signature.t,
+      ~nonce: int32,
+      ~block_height: int64,
+      ~source: Wallet.t,
+      ~amount: Amount.t,
+      ~kind: kind
+    ) =>
+    result(t, string);
 };
-
-let self_sign_side:
-  (~key: Address.key, Side_chain.t) => Side_chain.Self_signed.t;

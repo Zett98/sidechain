@@ -2,11 +2,21 @@ open Helpers;
 
 module Main_chain = {
   [@deriving (ord, yojson)]
-  type t =
+  type kind =
     // TODO: can a validator uses the same key in different nodes?
     // If so the ordering in the list must never use the same key two times in sequence
     | Add_validator(Validators.validator)
     | Remove_validator(Validators.validator);
+  [@deriving yojson]
+  type t = {
+    tezos_hash: BLAKE2B.t,
+    kind,
+  };
+  let compare = (a, b) => BLAKE2B.compare(a.tezos_hash, b.tezos_hash);
+
+  let make = (~tezos_hash, ~kind) => {
+    {tezos_hash, kind};
+  };
 };
 
 module Side_chain = {
@@ -17,6 +27,7 @@ module Side_chain = {
   [@deriving (ord, yojson)]
   type t = {
     hash: BLAKE2B.t,
+    signature: Signature.t,
     nonce: int32,
     block_height: int64,
     source: Wallet.t,
@@ -38,33 +49,30 @@ module Side_chain = {
     (hash, verify);
   };
 
-  let make = (~nonce, ~block_height, ~source, ~amount, ~kind) => {
+  let verify =
+      (~hash, ~signature, ~nonce, ~block_height, ~source, ~amount, ~kind) => {
+    let.ok () =
+      verify(~hash, ~nonce, ~block_height, ~source, ~amount, ~kind)
+        ? Ok() : Error("Side operation invalid hash");
+    let.ok () =
+      Signature.verify(~signature, hash)
+      && Wallet.pubkey_matches_wallet(
+           Signature.public_key(signature),
+           source,
+         )
+        ? Ok() : Error("Side operation invalid signature");
+    Ok({hash, signature, nonce, block_height, source, amount, kind});
+  };
+
+  let sign = (~secret, ~nonce, ~block_height, ~source, ~amount, ~kind) => {
     let hash = hash(~nonce, ~block_height, ~source, ~amount, ~kind);
-    {hash, nonce, block_height, source, amount, kind};
+    let signature = Signature.sign(~key=secret, hash);
+    {hash, signature, nonce, block_height, source, amount, kind};
   };
 
   let of_yojson = json => {
-    let.ok {hash, nonce, block_height, source, kind, amount} =
+    let.ok {hash, signature, nonce, block_height, source, kind, amount} =
       of_yojson(json);
-    let.ok () =
-      verify(~hash, ~nonce, ~block_height, ~source, ~amount, ~kind)
-        ? Ok() : Error("Invalid hash");
-    Ok({hash, nonce, block_height, source, amount, kind});
+    verify(~hash, ~signature, ~nonce, ~block_height, ~source, ~kind, ~amount);
   };
-
-  // TODO: maybe use GADT for this?
-  module Self_signed =
-    Signed.Make({
-      type nonrec t = t;
-      let compare = compare;
-      let to_yojson = to_yojson;
-      let of_yojson = of_yojson;
-      let verify = (~key, ~signature as _, data) =>
-        Wallet.of_address(key) == data.source;
-    });
-};
-
-let self_sign_side = (~key, op) => {
-  let Signed.{key, signature, data} = Signed.sign(~key, op);
-  Side_chain.Self_signed.verify(~key, ~signature, data) |> Result.get_ok;
 };

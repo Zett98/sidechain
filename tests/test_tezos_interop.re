@@ -1,15 +1,18 @@
 open Setup;
 open Protocol;
+open Address;
 open Tezos_interop;
 
 // TODO: maybe fuzz testing or any other cool testing magic?
-
+let some_contract_hash =
+  Contract_hash.of_string("KT1Dbav7SYrJFpd3bT7sVFDS9MPp4F5gABTc")
+  |> Option.get;
 describe("key", ({test, _}) => {
   open Key;
 
   // TODO: test encoding
 
-  let edpk = Ed25519(Address.genesis_address);
+  let edpk = Ed25519(genesis_address);
   test("to_string", ({expect, _}) => {
     expect.string(to_string(edpk)).toEqual(
       "edpkvDqjL7aXdsXSiK5ChCMAfqaqmCFWCv7DaT3dK1egJt136WBiT6",
@@ -54,7 +57,7 @@ describe("key_hash", ({test, _}) => {
   open Key_hash;
 
   // TODO: proper test of_key
-  let tz1 = of_key(Ed25519(Address.genesis_address));
+  let tz1 = of_key(Ed25519(genesis_address));
   test("to_string", ({expect, _}) => {
     expect.string(to_string(tz1)).toEqual(
       "tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLC",
@@ -80,7 +83,7 @@ describe("key_hash", ({test, _}) => {
 describe("secret", ({test, _}) => {
   open Secret;
 
-  let edsk = Ed25519(Address.genesis_key);
+  let edsk = Ed25519(genesis_key);
   test("to_string", ({expect, _}) => {
     expect.string(to_string(edsk)).toEqual(
       "edsk4bfbFdb4s2BdkW3ipfB23i9u82fgji6KT3oj2SCWTeHUthbSVd",
@@ -118,8 +121,8 @@ describe("secret", ({test, _}) => {
 describe("signature", ({test, _}) => {
   open Signature;
 
-  let edpk = Key.Ed25519(Address.genesis_address);
-  let edsk = Secret.Ed25519(Address.genesis_key);
+  let edpk = Key.Ed25519(genesis_address);
+  let edsk = Secret.Ed25519(genesis_key);
 
   // TODO: proper test for sign
   let edsig = sign(edsk, "tuturu");
@@ -182,6 +185,99 @@ describe("signature", ({test, _}) => {
       toBeNone()
   });
 });
+describe("contract_hash", ({test, _}) => {
+  open Contract_hash;
+  let kt1 = some_contract_hash;
+  test("to_string", ({expect, _}) => {
+    expect.string(to_string(kt1)).toEqual(
+      "KT1Dbav7SYrJFpd3bT7sVFDS9MPp4F5gABTc",
+    )
+  });
+  test("of_string", ({expect, _}) => {
+    expect.option(of_string("KT1Dbav7SYrJFpd3bT7sVFDS9MPp4F5gABTc")).toBe(
+      // TODO: proper equals
+      ~equals=(==),
+      Some(kt1),
+    )
+  });
+  test("invalid prefix", ({expect, _}) => {
+    expect.option(of_string("KT2Dbav7SYrJFpd3bT7sVFDS9MPp4F5gABTc")).toBeNone()
+  });
+  test("invalid checksum", ({expect, _}) => {
+    expect.option(of_string("KT1Dbav7SYrJFpd3bT7sVFDS9MPp4F5gABTd")).toBeNone()
+  });
+  test("invalid size", ({expect, _}) => {
+    expect.option(of_string("KT1Dbav7SYrJFpd3bT7sVFDS9MPp4F5gABT")).toBeNone()
+  });
+});
+describe("address", ({test, _}) => {
+  open Address;
+
+  let tz1 = Implicit(Key_hash.of_key(Ed25519(genesis_address)));
+  let kt1 = Originated(some_contract_hash);
+  test("to_string", ({expect, _}) => {
+    expect.string(to_string(tz1)).toEqual(
+      "tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLC",
+    );
+    expect.string(to_string(kt1)).toEqual(
+      "KT1Dbav7SYrJFpd3bT7sVFDS9MPp4F5gABTc",
+    );
+  });
+  test("of_string", ({expect, _}) => {
+    expect.option(of_string("tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLC")).toBe(
+      // TODO: proper equals
+      ~equals=(==),
+      Some(tz1),
+    );
+    expect.option(of_string("KT1Dbav7SYrJFpd3bT7sVFDS9MPp4F5gABTc")).toBe(
+      // TODO: proper equals
+      ~equals=(==),
+      Some(kt1),
+    );
+  });
+  test("invalid prefix", ({expect, _}) => {
+    expect.option(of_string("tz4LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLC")).toBeNone()
+  });
+  test("invalid checksum", ({expect, _}) => {
+    expect.option(of_string("tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLd")).toBeNone()
+  });
+  test("invalid size", ({expect, _}) => {
+    expect.option(of_string("tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCL")).toBeNone()
+  });
+});
+describe("ticket", ({test, _}) => {
+  open Ticket;
+
+  let kt1 = Address.Originated(some_contract_hash);
+  let ticket = {ticketer: kt1, data: Bytes.of_string("a")};
+  test("to_string", ({expect, _}) => {
+    expect.string(to_string(ticket)).toEqual(
+      {|(Pair "KT1Dbav7SYrJFpd3bT7sVFDS9MPp4F5gABTc" 0x61)|},
+    )
+  });
+  test("of_string", ({expect, _}) => {
+    expect.option(
+      of_string({|(Pair "KT1Dbav7SYrJFpd3bT7sVFDS9MPp4F5gABTc" 0x61)|}),
+    ).
+      toBe(
+      ~equals=(==),
+      Some(ticket),
+    )
+  });
+
+  test("invalid address", ({expect, _}) => {
+    expect.option(
+      of_string({|(Pair "BT1Dbav7SYrJFpd3bT7sVFDS9MPp4F5gABTc" 0x61)|}),
+    ).
+      toBeNone()
+  });
+  test("invalid bytes", ({expect, _}) => {
+    expect.option(
+      of_string({|(Pair "BT1Dbav7SYrJFpd3bT7sVFDS9MPp4F5gABTc" 0x6Z)|}),
+    ).
+      toBeNone()
+  });
+});
 describe("pack", ({test, _}) => {
   open Pack;
 
@@ -218,13 +314,23 @@ describe("pack", ({test, _}) => {
   );
   test(
     "key(\"edpkvDqjL7aXdsXSiK5ChCMAfqaqmCFWCv7DaT3dK1egJt136WBiT6\")",
-    key(Ed25519(Address.genesis_address)),
+    key(Ed25519(genesis_address)),
     "050a0000002100d00725159de904a28aaed9adb2320f95bd2117959e41c1c2377ac11045d18bd7",
   );
   test(
     "key_hash(\"tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLC\")",
-    key_hash(Key_hash.of_key(Ed25519(Address.genesis_address))),
+    key_hash(Key_hash.of_key(Ed25519(genesis_address))),
     "050a00000015000ec89608700c0414159d93552ef9361cea96da13",
+  );
+  test(
+    "address(\"tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLC\")",
+    address(Implicit(Key_hash.of_key(Ed25519(genesis_address)))),
+    "050a0000001600000ec89608700c0414159d93552ef9361cea96da13",
+  );
+  test(
+    "address(\"KT1Dbav7SYrJFpd3bT7sVFDS9MPp4F5gABTc\")",
+    address(Originated(some_contract_hash)),
+    "050a0000001601370027c6c8f3fbafda4f9bfd08b14f45e6a29ce300",
   );
 });
 describe("consensus", ({test, _}) => {
@@ -273,7 +379,7 @@ describe("consensus", ({test, _}) => {
 describe("discovery", ({test, _}) => {
   open Discovery;
 
-  let secret = Secret.Ed25519(Address.genesis_key);
+  let secret = Secret.Ed25519(genesis_key);
   test("sign", ({expect, _}) => {
     let signature =
       sign(secret, ~nonce=1L, Uri.of_string("http://localhost"));

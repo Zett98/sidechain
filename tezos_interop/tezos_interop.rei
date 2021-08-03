@@ -6,7 +6,6 @@ module Key: {
   type t =
     | Ed25519(Mirage_crypto_ec.Ed25519.pub_);
 
-  let encoding: Data_encoding.t(t);
   let to_string: t => string;
   let of_string: string => option(t);
 };
@@ -16,6 +15,7 @@ module Key_hash: {
     | Ed25519(Helpers.BLAKE2B_20.t);
 
   let of_key: Key.t => t;
+
   let to_string: t => string;
   let of_string: string => option(t);
 };
@@ -38,6 +38,31 @@ module Signature: {
   let of_string: string => option(t);
 };
 
+module Contract_hash: {
+  type t = BLAKE2B_20.t;
+
+  let to_string: t => string;
+  let of_string: string => option(t);
+};
+
+module Address: {
+  type t =
+    | Implicit(Key_hash.t)
+    | Originated(Contract_hash.t);
+
+  let to_string: t => string;
+  let of_string: string => option(t);
+};
+
+module Ticket: {
+  type t = {
+    ticketer: Address.t,
+    data: bytes,
+  };
+
+  let to_string: t => string;
+  let of_string: string => option(t);
+};
 module Pack: {
   type t;
 
@@ -47,6 +72,7 @@ module Pack: {
   let list: list(t) => t;
   let key: Key.t => t;
   let key_hash: Key_hash.t => t;
+  let address: Address.t => t;
 
   let to_bytes: t => bytes;
 };

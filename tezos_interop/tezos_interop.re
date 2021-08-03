@@ -1,6 +1,8 @@
 open Helpers;
 open Mirage_crypto_ec;
 
+let (let.some) = Option.bind;
+
 let rec try_decode_list = (l, string) =>
   switch (l) {
   | [of_string, ...l] =>
@@ -197,6 +199,74 @@ module Secret = {
     try_decode_list([ed25519]);
   };
 };
+module Contract_hash = {
+  type t = BLAKE2B_20.t;
+
+  let name = "Contract_hash";
+  let encoding = Data_encoding.(obj1(req(name, blake2b_20_encoding)));
+  let to_raw = BLAKE2B_20.to_raw_string;
+  let of_raw = BLAKE2B_20.of_raw_string;
+  let prefix = Base58.Prefix.contract_hash;
+  let to_string = t => Base58.simple_encode(~prefix, ~to_raw, t);
+  let of_string = string => Base58.simple_decode(~prefix, ~of_raw, string);
+};
+module Address = {
+  // TODO: there is also contract_hash with entrypoint
+  type t =
+    | Implicit(Key_hash.t)
+    | Originated(Contract_hash.t);
+
+  let encoding =
+    Data_encoding.(
+      def(
+        "contract_id",
+        ~title="A contract handle",
+        ~description=
+          "A contract notation as given to an RPC or inside scripts. Can be a base58 implicit contract hash or a base58 originated contract hash.",
+      ) @@
+      union(
+        ~tag_size=`Uint8,
+        [
+          case(
+            Tag(0),
+            ~title="Implicit",
+            Key_hash.encoding,
+            fun
+            | Implicit(k) => Some(k)
+            | _ => None,
+            k =>
+            Implicit(k)
+          ),
+          case(
+            Tag(1),
+            Fixed.add_padding(Contract_hash.encoding, 1),
+            ~title="Originated",
+            fun
+            | Originated(k) => Some(k)
+            | _ => None,
+            k =>
+            Originated(k)
+          ),
+        ],
+      )
+    );
+
+  let to_string =
+    fun
+    | Implicit(key_hash) => Key_hash.to_string(key_hash)
+    | Originated(contract_hash) => Contract_hash.to_string(contract_hash);
+  let of_string = {
+    let implicit = string => {
+      let.some implicit = Key_hash.of_string(string);
+      Some(Implicit(implicit));
+    };
+    let originated = string => {
+      let.some originated = Contract_hash.of_string(string);
+      Some(Originated(originated));
+    };
+    try_decode_list([implicit, originated]);
+  };
+};
 
 module Signature = {
   type t =
@@ -224,6 +294,52 @@ module Signature = {
   };
 };
 
+module Ticket = {
+  open Tezos_micheline;
+
+  type t = {
+    ticketer: Address.t,
+    data: bytes,
+  };
+
+  let parse_micheline = string => {
+    let (tokens, errors) = Micheline_parser.tokenize(string);
+    switch (errors) {
+    | [] =>
+      let (micheline, errors) = Micheline_parser.parse_expression(tokens);
+      switch (errors) {
+      | [] => Some(micheline)
+      | _ => None
+      };
+    | _ => None
+    };
+  };
+
+  let to_string = t => {
+    let loc = Micheline_printer.{comment: None};
+    let micheline =
+      Micheline.Prim(
+        loc,
+        "Pair",
+        [String(loc, Address.to_string(t.ticketer)), Bytes(loc, t.data)],
+        [],
+      );
+    Format.asprintf("%a", Micheline_printer.print_expr, micheline);
+  };
+  let of_string = string => {
+    let.some micheline = parse_micheline(string);
+    let.some (ticketer, data) =
+      switch (micheline) {
+      // TODO: maybe full Michelson_v1_parser
+      | Prim(_, "Pair", [String(_, ticketer), Bytes(_, data)], []) =>
+        Some((ticketer, data))
+      | _ => None
+      };
+    let.some ticketer = Address.of_string(ticketer);
+    Some({ticketer, data});
+  };
+};
+
 module Pack = {
   open Tezos_micheline;
   open Micheline;
@@ -239,7 +355,14 @@ module Pack = {
     Bytes(-1, Data_encoding.Binary.to_bytes_exn(Key.encoding, k));
   let key_hash = h =>
     Bytes(-1, Data_encoding.Binary.to_bytes_exn(Key_hash.encoding, h));
-
+  let address = addr =>
+    Bytes(
+      -1,
+      Data_encoding.Binary.to_bytes_exn(
+        Data_encoding.(tup2(Address.encoding, Variable.string)),
+        (addr, ""),
+      ),
+    );
   let expr_encoding =
     Micheline.canonical_encoding_v1(
       ~variant="michelson_v1",
