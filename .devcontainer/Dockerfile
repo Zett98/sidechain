@@ -22,3 +22,5 @@ RUN chmod +x /tmp/tools/ligo && sudo cp /tmp/tools/ligo /usr/local/bin
 # Download mainnet docker script (commented out because it requires docker-in-docker)
 # RUN wget -O mainnet.sh https://gitlab.com/tezos/tezos/raw/latest-release/scripts/tezos-docker-manager.sh && chmod +x mainnet.sh
 
+
+COPY scripts/tmux.conf ~/tmux.config
