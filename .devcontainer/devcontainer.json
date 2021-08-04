@@ -23,7 +23,10 @@
 		"indentRainbow.ignoreErrorLanguages": [
 			"*"
 		],
-		"files.insertFinalNewline": true
+		"files.insertFinalNewline": true,
+		"terminal.integrated.commandsToSkipShell": [
+			"-workbench.action.toggleSidebarVisibility"
+		]
 	},
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
