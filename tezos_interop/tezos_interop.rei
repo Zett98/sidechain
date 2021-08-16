@@ -154,3 +154,9 @@ module Consensus: {
 };
 
 module Discovery: {let sign: (Secret.t, ~nonce: int64, Uri.t) => Signature.t;};
+
+module Fetch_validators: {
+  let run:
+    (~rpc_node: string, ~contract_address: string) =>
+    Lwt.t(result(list(string), string));
+};

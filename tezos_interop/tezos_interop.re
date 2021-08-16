@@ -506,6 +506,53 @@ module Run_contract = {
     };
   };
 };
+
+module Fetch_validators = {
+  [@deriving to_yojson]
+  type input = {
+    rpc_node: string,
+    contract_address: string,
+  };
+  [@deriving of_yojson]
+  type root_hash = {
+    current_block_hash: string,
+    current_block_height: string,
+    current_handles_hash: string,
+    current_state_hash: string,
+    current_validators: list(string),
+  };
+  [@deriving of_yojson]
+  type vault = {
+    known_handles_hash: string,
+    used_handles: string,
+    vault: string,
+  };
+  [@deriving of_yojson]
+  type output = {
+    root_hash,
+    vault,
+  };
+  let run = (~rpc_node, ~contract_address) => {
+    let input = {rpc_node, contract_address};
+    // TODO: stop hard coding this
+    let command = "node";
+    let.await file =
+      Lwt_io.with_temp_file(~suffix=".js", ((file, oc)) => {
+        let.await () = Lwt_io.write(oc, [%blob "fetch_storage.bundle.js"]);
+        await(file);
+      });
+    let.await output =
+      Lwt_process.pmap(
+        (command, [|command, file|]),
+        Yojson.Safe.to_string(input_to_yojson(input)),
+      );
+    switch (Yojson.Safe.from_string(output) |> output_of_yojson) {
+    | Ok(data) => await(Ok(data.root_hash.current_validators))
+    | Error(error) => await(Error(error))
+    };
+  };
+};
+
 module Listen_transactions = {
   open Tezos_micheline;
   type michelson = Micheline.node(int, Michelson_v1_primitives.prim);
