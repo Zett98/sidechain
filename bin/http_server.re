@@ -177,10 +177,36 @@ let handle_ticket_balance =
 let node = {
   let folder = Sys.argv[1];
   let.await identity = Files.Identity.read(~file=folder ++ "/identity.json");
-  let.await validators =
-    Files.Validators.read(~file=folder ++ "/validators.json");
   let.await interop_context =
     Files.Interop_context.read(~file=folder ++ "/tezos.json");
+  let.await validator_res =
+    Tezos_interop.Fetch_validators.run(
+      ~rpc_node=interop_context.rpc_node |> Uri.to_string,
+      ~contract_address=
+        interop_context.consensus_contract |> Tezos_interop.Address.to_string,
+    );
+  let validators =
+    switch (validator_res) {
+    | Ok(current_validators) =>
+      current_validators
+      |> List.mapi((i, validator) => {
+           (
+             switch (validator |> Address.of_string) {
+             | Some(address) => address
+             | None =>
+               failwith(
+                 Printf.sprintf(
+                   "Could not parse %s received from the contract into an address",
+                   validator,
+                 ),
+               )
+             },
+             Printf.sprintf("https://localhost:444%d", i) |> Uri.of_string,
+           )
+         })
+
+    | Error(err) => failwith(err)
+    };
   let initial_validators_uri =
     List.fold_left(
       (validators_uri, (address, uri)) =>
