@@ -28,8 +28,8 @@ describe("ledger", ({test, _}) => {
     Wallet.of_address(address);
   };
   let make_tezos_address = () => {
-    open Mirage_crypto_ec;
     open Tezos_interop;
+    open Mirage_crypto_ec;
     let (_key, address) = Ed25519.generate();
     let hash =
       BLAKE2B_20.hash(Ed25519.pub_to_cstruct(address) |> Cstruct.to_string);

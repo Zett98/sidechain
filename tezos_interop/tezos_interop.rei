@@ -1,10 +1,13 @@
 open Helpers;
 
 module Base58 = Base58;
+module Ed25519 = Crypto.Ed25519;
+module P256 = Crypto.P256;
 
 module Key: {
   type t =
-    | Ed25519(Mirage_crypto_ec.Ed25519.pub_);
+    | Ed25519(Ed25519.Pub.t)
+    | P256(P256.Pub.t);
 
   let to_string: t => string;
   let of_string: string => option(t);
@@ -12,7 +15,8 @@ module Key: {
 
 module Key_hash: {
   type t =
-    | Ed25519(Helpers.BLAKE2B_20.t);
+    | Ed25519(BLAKE2B_20.t)
+    | P256(BLAKE2B_20.t);
 
   let of_key: Key.t => t;
 
@@ -22,14 +26,15 @@ module Key_hash: {
 
 module Secret: {
   type t =
-    | Ed25519(Mirage_crypto_ec.Ed25519.priv);
+    | Ed25519(Ed25519.Secret.t)
+    | P256(P256.Secret.t);
 
   let to_string: t => string;
   let of_string: string => option(t);
 };
 
 module Signature: {
-  type t = pri | Ed25519(string);
+  type t = pri | Ed25519(string) | P256(string);
 
   let sign: (Secret.t, string) => t;
   let check: (Key.t, t, string) => bool;
@@ -38,7 +43,7 @@ module Signature: {
   let of_string: string => option(t);
 
   // TODO: this is a leaky abstraction
-  let of_raw_string: [ | `Ed25519(string)] => t;
+  let of_raw_string: [ | `Ed25519(string) | `P256(string)] => t;
 };
 
 module Contract_hash: {
