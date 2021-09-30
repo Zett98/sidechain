@@ -73,10 +73,16 @@ let uri = {
 
 let address = {
   open Tezos_interop.Key_hash;
-  let parser = string =>
-    Tezos_interop.Key_hash.of_string(string)
-    |> Option.map((Ed25519(hash)) => Wallet.address_of_blake(hash))
+  let parser = string => {
+    let key = Tezos_interop.Key_hash.of_string(string);
+    Option.bind(
+      key,
+      fun
+      | Ed25519(hash) => Some(Wallet.address_of_blake(hash))
+      | P256(_) => None,
+    )
     |> Option.to_result(~none=`Msg("Expected a wallet address."));
+  };
   let printer = (fmt, wallet) =>
     Format.fprintf(
       fmt,
@@ -641,6 +647,7 @@ let setup_node =
   let secret = {
     switch (secret) {
     | Tezos_interop.Secret.Ed25519(secret) => secret
+    | _ => raise(Exit) // @TODO: is this appropriate?
     };
   };
   let address = Address.of_key(secret);

@@ -28,6 +28,7 @@ let address_to_string = wallet =>
 let address_of_string = string =>
   switch (Tezos_interop.Key_hash.of_string(string)) {
   | Some(Ed25519(key)) => Some(key)
+  | Some(P256(_)) => None
   | None => None
   };
 let to_yojson = t => `String(address_to_string(t));

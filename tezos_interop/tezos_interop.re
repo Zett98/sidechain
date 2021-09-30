@@ -1,7 +1,5 @@
 open Helpers;
-open Mirage_crypto_ec;
-
-let (let.some) = Option.bind;
+open Crypto;
 
 let rec try_decode_list = (l, string) =>
   switch (l) {
@@ -12,103 +10,14 @@ let rec try_decode_list = (l, string) =>
     }
   | [] => None
   };
-
-let blake2b_20_encoding =
-  Data_encoding.(
-    conv(
-      hash => BLAKE2B_20.to_raw_string(hash) |> Bytes.of_string,
-      // TODO: I don't like this exception below
-      bytes =>
-        Bytes.to_string(bytes) |> BLAKE2B_20.of_raw_string |> Option.get,
-      Fixed.bytes(20),
-    )
-  );
 module Base58 = Base58;
-
-module Ed25519 = {
-  open Ed25519;
-
-  type t = pub_;
-
-  let size = 32;
-  let prefix = Base58.Prefix.ed25519_public_key;
-  let encoding = {
-    // TODO: in tezos this is splitted json is not same as binary
-    let to_bytes = t => pub_to_cstruct(t) |> Cstruct.to_bytes;
-    let of_bytes_exn = b =>
-      Cstruct.of_bytes(b) |> pub_of_cstruct |> Result.get_ok;
-    Data_encoding.(conv(to_bytes, of_bytes_exn, Fixed.bytes(size)));
-  };
-
-  let to_raw = t => Cstruct.to_string(Ed25519.pub_to_cstruct(t));
-  let of_raw = string =>
-    Ed25519.pub_of_cstruct(Cstruct.of_string(string)) |> Result.to_option;
-  let to_string = Base58.simple_encode(~prefix, ~to_raw);
-  let of_string = Base58.simple_decode(~prefix, ~of_raw);
-
-  module Hash = {
-    type t = BLAKE2B_20.t;
-
-    let hash_key = t =>
-      BLAKE2B_20.hash(Ed25519.pub_to_cstruct(t) |> Cstruct.to_string);
-
-    let encoding = {
-      let name = "Ed25519.Public_key_hash";
-      // TODO: in tezos this is splitted json is not same as bin
-      Data_encoding.(obj1(req(name, blake2b_20_encoding)));
-    };
-
-    let prefix = Base58.Prefix.ed25519_public_key_hash;
-    let to_raw = BLAKE2B_20.to_raw_string;
-    let of_raw = BLAKE2B_20.of_raw_string;
-    let to_string = Base58.simple_encode(~prefix, ~to_raw);
-    let of_string = Base58.simple_decode(~prefix, ~of_raw);
-  };
-
-  module Secret = {
-    type t = priv;
-
-    let _size = 32;
-    let prefix = Base58.Prefix.ed25519_seed;
-    let to_raw = t => Cstruct.to_string(Ed25519.priv_to_cstruct(t));
-    let of_raw = string =>
-      Ed25519.priv_of_cstruct(Cstruct.of_string(string)) |> Result.to_option;
-
-    let to_string = Base58.simple_encode(~prefix, ~to_raw);
-    let of_string = Base58.simple_decode(~prefix, ~of_raw);
-  };
-  module Signature = {
-    type t = string;
-    let sign = (secret, message) => {
-      // double hash because tezos always uses blake2b on CHECK_SIGNATURE
-      let hash = BLAKE2B.hash(message);
-      Cstruct.of_string(BLAKE2B.to_raw_string(hash))
-      // TODO: isn't this double hashing? Seems weird
-      |> Ed25519.sign(~key=secret)
-      |> Cstruct.to_string;
-    };
-    let check = (public, signature, message) => {
-      let hash = BLAKE2B.hash(message);
-      verify(
-        ~key=public,
-        ~msg=Cstruct.of_string(BLAKE2B.to_raw_string(hash)),
-        Cstruct.of_string(signature),
-      );
-    };
-
-    let size = 64;
-    let prefix = Base58.Prefix.ed25519_signature;
-    let to_raw = Fun.id;
-    let of_raw = string =>
-      String.length(string) == size ? Some(string) : None;
-    let to_string = Base58.simple_encode(~prefix, ~to_raw);
-    let of_string = Base58.simple_decode(~prefix, ~of_raw);
-  };
-};
+module Ed25519 = Ed25519;
+module P256 = P256;
 
 module Key = {
   type t =
-    | Ed25519(Ed25519.t);
+    | Ed25519(Ed25519.Pub.t)
+    | P256(P256.Pub.t);
 
   let name = "Signature.Public_key";
   let title = "A Ed25519, Secp256k1, or P256 public key";
@@ -119,12 +28,23 @@ module Key = {
       union([
         case(
           Tag(0),
-          Ed25519.encoding,
+          Ed25519.Pub.encoding,
           ~title="Ed25519",
           fun
-          | Ed25519(x) => Some(x),
+          | Ed25519(x) => Some(x)
+          | _ => None,
           x =>
           Ed25519(x)
+        ),
+        case(
+          Tag(2),
+          P256.Pub.encoding,
+          ~title="P256",
+          fun
+          | P256(x) => Some(x)
+          | _ => None,
+          x =>
+          P256(x)
         ),
       ]);
 
@@ -133,19 +53,25 @@ module Key = {
   };
   let to_string =
     fun
-    | Ed25519(key) => Ed25519.to_string(key);
+    | Ed25519(key) => Ed25519.Pub.to_string(key)
+    | P256(key) => P256.Pub.to_string(key);
   let of_string = {
     let ed25519 = string => {
-      let.some key = Ed25519.of_string(string);
+      let.some key = Ed25519.Pub.of_string(string);
       Some(Ed25519(key));
     };
-    try_decode_list([ed25519]);
+    let p256 = string => {
+      let.some key = P256.Pub.of_string(string);
+      Some(P256(key));
+    };
+    try_decode_list([ed25519, p256]);
   };
 };
 
 module Key_hash = {
   type t =
-    | Ed25519(Ed25519.Hash.t);
+    | Ed25519(BLAKE2B_20.t)
+    | P256(BLAKE2B_20.t);
 
   let name = "Signature.Public_key_hash";
 
@@ -160,9 +86,20 @@ module Key_hash = {
           Ed25519.Hash.encoding,
           ~title="Ed25519",
           fun
-          | Ed25519(x) => Some(x),
+          | Ed25519(x) => Some(x)
+          | _ => None,
           x =>
           Ed25519(x)
+        ),
+        case(
+          Tag(2),
+          P256.Hash.encoding,
+          ~title="P256",
+          fun
+          | P256(x) => Some(x)
+          | _ => None,
+          x =>
+          P256(x)
         ),
       ]);
     obj1(req(name, raw_encoding));
@@ -171,32 +108,45 @@ module Key_hash = {
   let of_key = t =>
     switch (t) {
     | Key.Ed25519(pub_) => Ed25519(Ed25519.Hash.hash_key(pub_))
+    | Key.P256(pub_) => P256(P256.Hash.hash_key(pub_))
     };
 
   let to_string =
     fun
-    | Ed25519(hash) => Ed25519.Hash.to_string(hash);
+    | Ed25519(hash) => Ed25519.Hash.to_string(hash)
+    | P256(pub_) => P256.Hash.to_string(pub_);
+
   let of_string = {
     let ed25519 = string => {
       let.some key = Ed25519.Hash.of_string(string);
       Some(Ed25519(key));
     };
-    try_decode_list([ed25519]);
+    let p256 = string => {
+      let.some key = P256.Hash.of_string(string);
+      Some(P256(key));
+    };
+    try_decode_list([ed25519, p256]);
   };
 };
 module Secret = {
   type t =
-    | Ed25519(Ed25519.Secret.t);
+    | Ed25519(Ed25519.Secret.t)
+    | P256(P256.Secret.t);
 
   let to_string =
     fun
-    | Ed25519(secret) => Ed25519.Secret.to_string(secret);
+    | Ed25519(secret) => Ed25519.Secret.to_string(secret)
+    | P256(secret) => P256.Secret.to_string(secret);
   let of_string = {
     let ed25519 = string => {
       let.some secret = Ed25519.Secret.of_string(string);
       Some(Ed25519(secret));
     };
-    try_decode_list([ed25519]);
+    let p256 = string => {
+      let.some secret = P256.Secret.of_string(string);
+      Some(P256(secret));
+    };
+    try_decode_list([ed25519, p256]);
   };
 };
 module Contract_hash = {
@@ -313,32 +263,44 @@ module Address = {
 
 module Signature = {
   type t =
-    | Ed25519(Ed25519.Signature.t);
+    | Ed25519(Ed25519.Signature.t)
+    | P256(P256.Signature.t);
 
   let sign = (secret, message) =>
     switch (secret) {
     | Secret.Ed25519(secret) =>
       Ed25519(Ed25519.Signature.sign(secret, message))
+    | Secret.P256(secret) => P256(P256.Signature.sign(secret, message))
     };
   let check = (key, signature, message) =>
     switch (key, signature) {
     | (Key.Ed25519(key), Ed25519(signature)) =>
       Ed25519.Signature.check(key, signature, message)
+    | (Key.P256(key), P256(signature)) =>
+      P256.Signature.check(key, signature, message)
+    | _ => assert(false) // @TODO: It's probably not possible, so i dont know how to handle it
     };
   let to_string =
     fun
-    | Ed25519(sign) => Ed25519.Signature.to_string(sign);
+    | Ed25519(sign) => Ed25519.Signature.to_string(sign)
+    | P256(sign) => P256.Signature.to_string(sign);
   let of_string = {
     let ed25519 = string => {
       let.some sign = Ed25519.Signature.of_string(string);
       Some(Ed25519(sign));
     };
-    try_decode_list([ed25519]);
+    let p256 = string => {
+      let.some sign = P256.Signature.of_string(string);
+      Some(P256(sign));
+    };
+    try_decode_list([ed25519, p256]);
   };
   // TODO: this is a leaky abstraction
+  // what should i do with it?
   let of_raw_string =
     fun
-    | `Ed25519(data) => Ed25519(data);
+    | `Ed25519(data) => Ed25519(data)
+    | `P256(data) => P256(data);
 };
 
 module Ticket = {
