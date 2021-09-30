@@ -35,7 +35,6 @@ module type S = {
     type t;
     let sign: (Secret.t, t) => t;
     let check: (Pub.t, t, t) => bool;
-
     let to_string: (~alphabet: Base58.Alphabet.t=?, t) => t;
     let of_string: (~alphabet: Base58.Alphabet.t=?, t) => option(t);
   };
@@ -54,7 +53,6 @@ module Ed25519 = {
         Cstruct.of_bytes(b) |> pub_of_cstruct |> Result.get_ok;
       Data_encoding.(conv(to_bytes, of_bytes_exn, Fixed.bytes(size)));
     };
-
     let to_raw = t => Cstruct.to_string(Ed25519.pub_to_cstruct(t));
     let of_raw = string =>
       Ed25519.pub_of_cstruct(Cstruct.of_string(string)) |> Result.to_option;
@@ -132,79 +130,6 @@ module P256 = {
       Cstruct.set_uint8(res, 0, ident);
       Cstruct.to_string(res);
     };
-
-    let modulo = (x, y) => {
-      open Z;
-      let result = x mod y;
-      if (geq(result, zero)) {
-        result;
-      } else {
-        result + y;
-      };
-    };
-    let tonelli = (n, p) => {
-      open Z;
-      let (q, s) = (p - one, zero);
-      let rec go = (q, s) =>
-        if (equal(modulo(q, of_int(2)), zero)) {
-          go(q /< of_int(2), succ(s));
-        } else {
-          (q, s);
-        };
-      let (q, s) = go(q, s);
-      let rec go = z =>
-        if (!
-              equal(
-                powm(z, (p - one) /< of_int(2), p),
-                modulo(neg(one), p),
-              )) {
-          go(z + one);
-        } else {
-          z;
-        };
-      let z = go(of_int(2));
-      let (m, c, t, r) = (
-        s,
-        powm(z, q, p),
-        powm(n, q, p),
-        powm(n, (q + one) /< of_int(2), p),
-      );
-      let rec go = (m, c, t, r) => {
-        let rec go' = (i, m') =>
-          if (equal(powm(t, i ** 2, p), one)) {
-            i;
-          } else {
-            go'(succ(i), m');
-          };
-        if (!equal(t, one)) {
-          let i = go'(one, m);
-          let b = powm(c, of_int(2) ** to_int(m - i - one), p);
-          go(
-            i,
-            powm_sec(b, of_int(2), p),
-            modulo(powm(b, b, p), p),
-            modulo(r * b, p),
-          );
-        } else {
-          (m, c, t, r);
-        };
-      };
-      let (_, _, _, r) = go(m, c, t, r);
-      r;
-    };
-    let sqrt_mod = (n, p) => {
-      Z.(
-        if (equal(modulo(p, of_int(4)), of_int(3))) {
-          let k = p - of_int(3) /< of_int(4);
-          let x = powm(n, succ(k), p);
-          x;
-        } else {
-          tonelli(n, p);
-        }
-      );
-    };
-
-
     let p =
       Z.of_string(
         "115792089210356248762697446949407573530086143415290314195533631308867097853951",
@@ -219,23 +144,14 @@ module P256 = {
     let decompress = string => {
       let buf = Cstruct.of_string(string);      
       let res = Cstruct.create(65);
-      let y_bit = Cstruct.get_uint8(buf, 0);
-      let x = Cstruct.sub(buf, 1, 32) |> Cstruct.to_string |> Z.of_bits; // this is wildly incorrent
-      let.some y = {
+      let x = Cstruct.sub(buf, 1, 32) |> Cstruct.rev |> Cstruct.to_string |> Z.of_bits; // this is wildly incorrent???
+      let y = {
         open Z;
-        let interm = modulo(powm(x, of_int(3), p) - modulo(of_int(3) * x,p) + b,p);
-        let r = sqrt_mod(interm,p);
-        let y_point =
-          if (Int.equal(y_bit, 3)) {
-            equal(modulo(r, of_int(2)), one) ? r : modulo(neg(r), p);
-          } else {
-            equal(modulo(r, of_int(2)), zero) ? r : modulo(neg(r), p);
-          };
-        Printf.printf("\nare interm and y_point^2 equal:  %b\n", equal(powm(y_point,of_int(2),p), interm));
-        let y_point = Z.to_bits(y_point) |> Cstruct.of_string;
-        Some(y_point);
+        let interm = powm(x ** 3 - of_int(3) * x + b, (p + one) /< of_int(4), p)
+        let y = min(interm, p - interm)
+        let y_point = Z.to_bits(y) |> Cstruct.of_string |> Cstruct.rev;
+        y_point;
       };
-      Printf.printf("bytes %d", Cstruct.length(y)); // should be 32
       Cstruct.set_uint8(res, 0, 4);
       Cstruct.blit(buf, 1, res, 1, 32);
       Cstruct.blit(y, 0, res, 33, 32);

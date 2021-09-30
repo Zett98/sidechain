@@ -19,8 +19,8 @@ describe("key", ({test, _}) => {
     |> (
       fun
       | Secret.P256(k) => {
-          let pub_ = Mirage_crypto_ec.P256.Dsa.pub_of_priv(k);
-          P256(pub_);
+          let p = Mirage_crypto_ec.P256.Dsa.pub_of_priv(k);
+          Key.P256(p);
         }
       | _ => assert(false)
     );
@@ -40,14 +40,14 @@ describe("key", ({test, _}) => {
       // TODO: proper equals
       ~equals=(==),
       Some(edpk),
-    )
-       expect.option(
+    );
+    expect.option(
       of_string("p2pk67Q8iDmyKxfwFMZpMuGecaU66HUe7qxECuEtBnHPkaQWh5R32xt"),
     ).
       toBe(
       // TODO: proper equals
       ~equals=(==),
-      Some(edpk),
+      Some(p256),
     )
   });
   test("invalid prefix", ({expect, _}) => {
