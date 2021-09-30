@@ -37,8 +37,8 @@ module Prefix = struct
   let p256_secret_key = "\016\081\238\189" (* p2sk(54) *)
 
    (* 33 *)
-   let p256_public_key = "\003\178\139\127" (* p2pk(55) *)
- 
+   let p256_public_key = "\003\178\139\127" (* p2pk(55) *) 
+   
   (* 64 *)
   let ed25519_signature = "\009\245\205\134\018" (* edsig(99) *)
   let p256_signature = "\054\240\044\052" (* p2sig(98) *)

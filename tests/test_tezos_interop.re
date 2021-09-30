@@ -13,14 +13,36 @@ describe("key", ({test, _}) => {
   // TODO: test encoding
 
   let edpk = Ed25519(genesis_address);
+  let p256 =
+    Secret.of_string("p2sk2bnkvi9yzCX8zqzLudw2QLoSng5myBWVEDsgHw3QrebBefqdsF")
+    |> Option.get
+    |> (
+      fun
+      | Secret.P256(k) => {
+          let pub_ = Mirage_crypto_ec.P256.Dsa.pub_of_priv(k);
+          P256(pub_);
+        }
+      | _ => assert(false)
+    );
   test("to_string", ({expect, _}) => {
     expect.string(to_string(edpk)).toEqual(
       "edpkvDqjL7aXdsXSiK5ChCMAfqaqmCFWCv7DaT3dK1egJt136WBiT6",
-    )
+    );
+    expect.string(to_string(p256)).toEqual(
+      "p2pk67Q8iDmyKxfwFMZpMuGecaU66HUe7qxECuEtBnHPkaQWh5R32xt",
+    );
   });
   test("of_string", ({expect, _}) => {
     expect.option(
       of_string("edpkvDqjL7aXdsXSiK5ChCMAfqaqmCFWCv7DaT3dK1egJt136WBiT6"),
+    ).
+      toBe(
+      // TODO: proper equals
+      ~equals=(==),
+      Some(edpk),
+    )
+       expect.option(
+      of_string("p2pk67Q8iDmyKxfwFMZpMuGecaU66HUe7qxECuEtBnHPkaQWh5R32xt"),
     ).
       toBe(
       // TODO: proper equals
@@ -58,10 +80,22 @@ describe("key_hash", ({test, _}) => {
 
   // TODO: proper test of_key
   let tz1 = of_key(Ed25519(genesis_address));
+  let p256 =
+    Secret.of_string("p2sk2bnkvi9yzCX8zqzLudw2QLoSng5myBWVEDsgHw3QrebBefqdsF")
+    |> Option.get
+    |> (
+      fun
+      | Secret.P256(k) => Key.P256(Mirage_crypto_ec.P256.Dsa.pub_of_priv(k))
+      | _ => assert(false)
+    )
+    |> of_key;
   test("to_string", ({expect, _}) => {
     expect.string(to_string(tz1)).toEqual(
       "tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLC",
-    )
+    );
+    expect.string(to_string(p256)).toEqual(
+      "tz3ZH2L3RGFbBU1V4Cst6cjhhAVh7xyHSSRt",
+    );
   });
   test("of_string", ({expect, _}) => {
     expect.option(of_string("tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLC")).toBe(
@@ -84,10 +118,21 @@ describe("secret", ({test, _}) => {
   open Secret;
 
   let edsk = Ed25519(genesis_key);
+  let p256 =
+    of_string("p2sk2bnkvi9yzCX8zqzLudw2QLoSng5myBWVEDsgHw3QrebBefqdsF")
+    |> Option.get
+    |> (
+      fun
+      | P256(k) => P256(k)
+      | _ => assert(false)
+    );
   test("to_string", ({expect, _}) => {
     expect.string(to_string(edsk)).toEqual(
       "edsk4bfbFdb4s2BdkW3ipfB23i9u82fgji6KT3oj2SCWTeHUthbSVd",
-    )
+    );
+    expect.string(to_string(p256)).toEqual(
+      "p2sk2bnkvi9yzCX8zqzLudw2QLoSng5myBWVEDsgHw3QrebBefqdsF",
+    );
   });
   test("of_string", ({expect, _}) => {
     expect.option(
@@ -97,7 +142,15 @@ describe("secret", ({test, _}) => {
       // TODO: proper equals
       ~equals=(==),
       Some(edsk),
-    )
+    );
+    expect.option(
+      of_string("p2sk2bnkvi9yzCX8zqzLudw2QLoSng5myBWVEDsgHw3QrebBefqdsF"),
+    ).
+      toBe(
+      // TODO: proper equals
+      ~equals=(==),
+      Some(p256),
+    );
   });
   test("invalid prefix", ({expect, _}) => {
     expect.option(
