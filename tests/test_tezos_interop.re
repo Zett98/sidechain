@@ -1,18 +1,14 @@
 open Setup;
-open Protocol;
-open Address;
 open Tezos_interop;
-
+module P_address = Protocol.Address;
 // TODO: maybe fuzz testing or any other cool testing magic?
 let some_contract_hash =
   Contract_hash.of_string("KT1Dbav7SYrJFpd3bT7sVFDS9MPp4F5gABTc")
   |> Option.get;
 describe("key", ({test, _}) => {
-  open Key;
-
   // TODO: test encoding
 
-  let edpk = Ed25519(genesis_address);
+  let edpk = Key.Ed25519(P_address.genesis_address);
   let p256 =
     Secret.of_string("p2sk2bnkvi9yzCX8zqzLudw2QLoSng5myBWVEDsgHw3QrebBefqdsF")
     |> Option.get
@@ -24,31 +20,32 @@ describe("key", ({test, _}) => {
         }
       | _ => assert(false)
     );
+
   test("to_string", ({expect, _}) => {
-    expect.string(to_string(edpk)).toEqual(
+    expect.string(Key.to_string(edpk)).toEqual(
       "edpkvDqjL7aXdsXSiK5ChCMAfqaqmCFWCv7DaT3dK1egJt136WBiT6",
     );
-    expect.string(to_string(p256)).toEqual(
+    expect.string(Key.to_string(p256)).toEqual(
       "p2pk67Q8iDmyKxfwFMZpMuGecaU66HUe7qxECuEtBnHPkaQWh5R32xt",
     );
   });
   test("of_string", ({expect, _}) => {
     expect.option(
-      of_string("edpkvDqjL7aXdsXSiK5ChCMAfqaqmCFWCv7DaT3dK1egJt136WBiT6"),
+      Key.of_string("edpkvDqjL7aXdsXSiK5ChCMAfqaqmCFWCv7DaT3dK1egJt136WBiT6"),
     ).
       toBe(
-      // TODO: proper equals
-      ~equals=(==),
+      ~equals=Key.equal,
       Some(edpk),
     );
     expect.option(
-      of_string("p2pk67Q8iDmyKxfwFMZpMuGecaU66HUe7qxECuEtBnHPkaQWh5R32xt"),
+      Key.of_string(
+        "p2pk67Q8iDmyKxfwFMZpMuGecaU66HUe7qxECuEtBnHPkaQWh5R32xt",
+      ),
     ).
       toBe(
-      // TODO: proper equals
-      ~equals=(==),
+      ~equals=Key.equal,
       Some(p256),
-    )
+    );
   });
   test("invalid prefix", ({expect, _}) => {
     // TODO: this test would fail anyway becose of the checksum
@@ -56,30 +53,42 @@ describe("key", ({test, _}) => {
     // TODO: when this test fails it segfaults
     // see https://github.com/reasonml/reason-native/pull/263
     expect.option(
-      of_string("edpuvDqjL7aXdsXSiK5ChCMAfqaqmCFWCv7DaT3dK1egJt136WBiT6"),
+      Key.of_string("edpuvDqjL7aXdsXSiK5ChCMAfqaqmCFWCv7DaT3dK1egJt136WBiT6"),
     ).
-      toBeNone()
+      toBeNone();
+    expect.option(
+      Key.of_string("p2p67Q8iDmyKxfwFMZpMuGecaU66HUe7qxECuEtBnHPkaQWh5R32xt"),
+    ).
+      toBeNone();
   });
   test("invalid checksum", ({expect, _}) => {
     expect.option(
-      of_string("edpkvDqjL7aXdsXSiK5ChCMAfqaqmCFWCv7DaT3dK1egJt136WBiT5"),
+      Key.of_string("edpkvDqjL7aXdsXSiK5ChCMAfqaqmCFWCv7DaT3dK1egJt136WBiT5"),
     ).
-      toBeNone()
+      toBeNone();
+    expect.option(
+      Key.of_string("p2p67Q8iDmyKxfwFMZpMuGecaU66HUe7qxECuEtBnHPkaQWh5R32xd"),
+    ).
+      toBeNone();
   });
   test("invalid size", ({expect, _}) => {
     // TODO: this test would fail anyway becose of the checksum
     //       craft an example with different size but valid checksum
     expect.option(
-      of_string("edpkvDqjL7aXdsXSiK5ChCMAfqaqmCFWCv7DaT3dK1egJt136WBiT"),
+      Key.of_string("edpkvDqjL7aXdsXSiK5ChCMAfqaqmCFWCv7DaT3dK1egJt136WBiT"),
     ).
-      toBeNone()
+      toBeNone();
+    expect.option(
+      Key.of_string("p2p67Q8iDmyKxfwFMZpMuGecaU66HUe7qxECuEtBnHPkaQWh5R32d"),
+    ).
+      toBeNone();
   });
 });
 describe("key_hash", ({test, _}) => {
   open Key_hash;
 
   // TODO: proper test of_key
-  let tz1 = of_key(Ed25519(genesis_address));
+  let tz1 = of_key(Ed25519(P_address.genesis_address));
   let p256 =
     Secret.of_string("p2sk2bnkvi9yzCX8zqzLudw2QLoSng5myBWVEDsgHw3QrebBefqdsF")
     |> Option.get
@@ -99,33 +108,34 @@ describe("key_hash", ({test, _}) => {
   });
   test("of_string", ({expect, _}) => {
     expect.option(of_string("tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLC")).toBe(
-      // TODO: proper equals
-      ~equals=(==),
+      ~equals=Key_hash.equal,
       Some(tz1),
-    )
+    );
+    expect.option(of_string("tz3ZH2L3RGFbBU1V4Cst6cjhhAVh7xyHSSRt")).toBe(
+      ~equals=Key_hash.equal,
+      Some(p256),
+    );
   });
   test("invalid prefix", ({expect, _}) => {
-    expect.option(of_string("tzaLzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLC")).toBeNone()
+    expect.option(of_string("tzaLzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLC")).toBeNone();
+    expect.option(of_string("tzbZH2L3RGFbBU1V4Cst6cjhhAVh7xyHSSRt")).toBeNone();
   });
   test("invalid checksum", ({expect, _}) => {
-    expect.option(of_string("tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLA")).toBeNone()
+    expect.option(of_string("tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLA")).toBeNone();
+    expect.option(of_string("tz3ZH2L3RGFbBU1V4Cst6cjhhAVh7xyHSSRA")).toBeNone();
   });
   test("invalid size", ({expect, _}) => {
-    expect.option(of_string("tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCL")).toBeNone()
+    expect.option(of_string("tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCL")).toBeNone();
+    expect.option(of_string("tz3ZH2L3RGFbBU1V4Cst6cjhhAVh7xyHSSRA")).toBeNone();
   });
 });
 describe("secret", ({test, _}) => {
   open Secret;
 
-  let edsk = Ed25519(genesis_key);
+  let edsk = Ed25519(P_address.genesis_key);
   let p256 =
     of_string("p2sk2bnkvi9yzCX8zqzLudw2QLoSng5myBWVEDsgHw3QrebBefqdsF")
-    |> Option.get
-    |> (
-      fun
-      | P256(k) => P256(k)
-      | _ => assert(false)
-    );
+    |> Option.get;
   test("to_string", ({expect, _}) => {
     expect.string(to_string(edsk)).toEqual(
       "edsk4bfbFdb4s2BdkW3ipfB23i9u82fgji6KT3oj2SCWTeHUthbSVd",
@@ -139,16 +149,14 @@ describe("secret", ({test, _}) => {
       of_string("edsk4bfbFdb4s2BdkW3ipfB23i9u82fgji6KT3oj2SCWTeHUthbSVd"),
     ).
       toBe(
-      // TODO: proper equals
-      ~equals=(==),
+      ~equals=Secret.equal,
       Some(edsk),
     );
     expect.option(
       of_string("p2sk2bnkvi9yzCX8zqzLudw2QLoSng5myBWVEDsgHw3QrebBefqdsF"),
     ).
       toBe(
-      // TODO: proper equals
-      ~equals=(==),
+      ~equals=Secret.equal,
       Some(p256),
     );
   });
@@ -174,17 +182,25 @@ describe("secret", ({test, _}) => {
 describe("signature", ({test, _}) => {
   open Signature;
 
-  let edpk = Key.Ed25519(genesis_address);
-  let edsk = Secret.Ed25519(genesis_key);
-
+  let edpk = Key.Ed25519(P_address.genesis_address);
+  let edsk = Secret.Ed25519(P_address.genesis_key);
+  let p2sk =
+    Secret.of_string("p2sk2bnkvi9yzCX8zqzLudw2QLoSng5myBWVEDsgHw3QrebBefqdsF")
+    |> Option.get;
+  let p2pk =
+    Key.of_string("p2pk67Q8iDmyKxfwFMZpMuGecaU66HUe7qxECuEtBnHPkaQWh5R32xt")
+    |> Option.get;
+  let p2sig = sign(p2sk, "test");
   // TODO: proper test for sign
   let edsig = sign(edsk, "tuturu");
 
   test("check", ({expect, _}) => {
-    expect.bool(check(edpk, edsig, "tuturu")).toBeTrue()
+    expect.bool(check(edpk, edsig, "tuturu")).toBeTrue();
+    expect.bool(check(p2pk, p2sig, "test")).toBeTrue();
   });
   test("invalid message", ({expect, _}) => {
-    expect.bool(check(edpk, edsig, "tuturu2")).toBeFalse()
+    expect.bool(check(edpk, edsig, "tuturu2")).toBeFalse();
+    expect.bool(check(p2pk, p2sig, "test2")).toBeFalse();
   });
   test("invalid key", ({expect, _}) => {
     let (secret, key) = {
@@ -194,12 +210,22 @@ describe("signature", ({test, _}) => {
     let edsig_from_key = sign(secret, "tuturu");
     expect.bool(check(key, edsig_from_key, "tuturu")).toBeTrue();
     expect.bool(check(edpk, edsig_from_key, "tuturu")).toBeFalse();
+    let (secret, key) = {
+      let (secret, key) = Mirage_crypto_ec.P256.Dsa.generate();
+      (Secret.P256(secret), Key.P256(key));
+    };
+    let pksig_from_key = sign(secret, "test");
+    expect.bool(check(key, pksig_from_key, "test")).toBeTrue();
+    expect.bool(check(p2pk, pksig_from_key, "test")).toBeFalse();
   });
 
   test("to_string", ({expect, _}) => {
     expect.string(to_string(edsig)).toEqual(
       "edsigtp1tNe8hVhfn9QPoGaLyxqksCbRxk6w3wTjbMDyu4QckAyhMDwUQc3yDCjfSqFXeccLkRjE1c1Lbm71i7uhGZqx7V8nSq4",
-    )
+    );
+    expect.string(to_string(p2sig)).toEqual(
+      "p2sigsm5wBds7GgXumAaHGZFqJgF1vmkzuCpikCvYpfQWdFd4ihHJUSZgMRBSBAFBhAVmpbtfVYNLMvTpi5DkYKHvf83iS3FEa",
+    );
   });
   test("of_string", ({expect, _}) => {
     expect.option(
@@ -209,9 +235,19 @@ describe("signature", ({test, _}) => {
     ).
       toBe(
       // TODO: proper equals
-      ~equals=(==),
+      ~equals=Signature.equal,
       Some(edsig),
-    )
+    );
+    expect.option(
+      of_string(
+        "p2sigsm5wBds7GgXumAaHGZFqJgF1vmkzuCpikCvYpfQWdFd4ihHJUSZgMRBSBAFBhAVmpbtfVYNLMvTpi5DkYKHvf83iS3FEa",
+      ),
+    ).
+      toBe(
+      // TODO: proper equals
+      ~equals=Signature.equal,
+      Some(p2sig),
+    );
   });
   test("invalid prefix", ({expect, _}) => {
     expect.option(
@@ -219,7 +255,13 @@ describe("signature", ({test, _}) => {
         "edsiatp1tNe8hVhfn9QPoGaLyxqksCbRxk6w3wTjbMDyu4QckAyhMDwUQc3yDCjfSqFXeccLkRjE1c1Lbm71i7uhGZqx7V8nSq4",
       ),
     ).
-      toBeNone()
+      toBeNone();
+    expect.option(
+      of_string(
+        "pksigsm5wBds7GgXumAaHGZFqJgF1vmkzuCpikCvYpfQWdFd4ihHJUSZgMRBSBAFBhAVmpbtfVYNLMvTpi5DkYKHvf83iS3FEa",
+      ),
+    ).
+      toBeNone();
   });
   test("invalid checksum", ({expect, _}) => {
     expect.option(
@@ -227,7 +269,13 @@ describe("signature", ({test, _}) => {
         "edsigtp1tNe8hVhfn9QPoGaLyxqksCbRxk6w3wTjbMDyu4QckAyhMDwUQc3yDCjfSqFXeccLkRjE1c1Lbm71i7uhGZqx7V8nSq3",
       ),
     ).
-      toBeNone()
+      toBeNone();
+    expect.option(
+      of_string(
+        "p2sigsm5wBds7GgXumAaHGZqqJgF1vmkzuCpikCvYpfQWdFd4ihHJUSZgMRBSBAFBhAVmpbtfVYNLMvTpi5DkYKHvf83iS3FEa",
+      ),
+    ).
+      toBeNone();
   });
   test("invalid size", ({expect, _}) => {
     expect.option(
@@ -235,7 +283,13 @@ describe("signature", ({test, _}) => {
         "edsigtp1tNe8hVhfn9QPoGaLyxqksCbRxk6w3wTjbMDyu4QckAyhMDwUQc3yDCjfSqFXeccLkRjE1c1Lbm71i7uhGZqx7V8nSq",
       ),
     ).
-      toBeNone()
+      toBeNone();
+    expect.option(
+      of_string(
+        "p2sigsm5wBds7GgXumAaHGZFqJg1vmkzuCpikCvYpfQWdFd4ihHJUSZgMRBSBAFBhAVmpbtfVYNLMvTpi5DkYKHvf83iS3FEa",
+      ),
+    ).
+      toBeNone();
   });
 });
 describe("contract_hash", ({test, _}) => {
@@ -264,9 +318,9 @@ describe("contract_hash", ({test, _}) => {
   });
 });
 describe("address", ({test, _}) => {
-  open Address;
+  open Tezos_interop.Address;
 
-  let tz1 = Implicit(Key_hash.of_key(Ed25519(genesis_address)));
+  let tz1 = Implicit(Key_hash.of_key(Ed25519(P_address.genesis_address)));
   let kt1 = Originated({contract: some_contract_hash, entrypoint: None});
   let kt1_tuturu =
     Originated({contract: some_contract_hash, entrypoint: Some("tuturu")});
@@ -427,17 +481,17 @@ describe("pack", ({test, _}) => {
   );
   test(
     "key(\"edpkvDqjL7aXdsXSiK5ChCMAfqaqmCFWCv7DaT3dK1egJt136WBiT6\")",
-    key(Ed25519(genesis_address)),
+    key(Ed25519(P_address.genesis_address)),
     "050a0000002100d00725159de904a28aaed9adb2320f95bd2117959e41c1c2377ac11045d18bd7",
   );
   test(
     "key_hash(\"tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLC\")",
-    key_hash(Key_hash.of_key(Ed25519(genesis_address))),
+    key_hash(Key_hash.of_key(Ed25519(P_address.genesis_address))),
     "050a00000015000ec89608700c0414159d93552ef9361cea96da13",
   );
   test(
     "address(\"tz1LzCSmZHG3jDvqxA8SG8WqbrJ9wz5eUCLC\")",
-    address(Implicit(Key_hash.of_key(Ed25519(genesis_address)))),
+    address(Implicit(Key_hash.of_key(Ed25519(P_address.genesis_address)))),
     "050a0000001600000ec89608700c0414159d93552ef9361cea96da13",
   );
   test(
@@ -511,7 +565,7 @@ describe("consensus", ({test, _}) => {
 describe("discovery", ({test, _}) => {
   open Discovery;
 
-  let secret = Secret.Ed25519(genesis_key);
+  let secret = Secret.Ed25519(P_address.genesis_key);
   test("sign", ({expect, _}) => {
     let signature =
       sign(secret, ~nonce=1L, Uri.of_string("http://localhost"));

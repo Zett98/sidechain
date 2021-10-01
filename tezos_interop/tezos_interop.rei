@@ -8,7 +8,7 @@ module Key: {
   type t =
     | Ed25519(Ed25519.Pub.t)
     | P256(P256.Pub.t);
-
+  let equal: (t, t) => bool;
   let to_string: t => string;
   let of_string: string => option(t);
 };
@@ -18,8 +18,8 @@ module Key_hash: {
     | Ed25519(BLAKE2B_20.t)
     | P256(BLAKE2B_20.t);
 
+  let equal: (t, t) => bool;
   let of_key: Key.t => t;
-
   let to_string: t => string;
   let of_string: string => option(t);
 };
@@ -28,7 +28,7 @@ module Secret: {
   type t =
     | Ed25519(Ed25519.Secret.t)
     | P256(P256.Secret.t);
-
+  let equal: (t, t) => bool;
   let to_string: t => string;
   let of_string: string => option(t);
 };
@@ -36,6 +36,7 @@ module Secret: {
 module Signature: {
   type t = pri | Ed25519(string) | P256(string);
 
+  let equal: (t, t) => bool;
   let sign: (Secret.t, string) => t;
   let check: (Key.t, t, string) => bool;
 
@@ -49,6 +50,7 @@ module Signature: {
 module Contract_hash: {
   type t = BLAKE2B_20.t;
 
+  let equal: t => t => bool
   let to_string: t => string;
   let of_string: string => option(t);
 };

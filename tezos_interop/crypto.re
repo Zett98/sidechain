@@ -121,7 +121,7 @@ module Ed25519 = {
 };
 module P256 = {
   module Dsa = P256.Dsa;
-  module Compresss = {
+  module Compress = {
     let compress = t => {
       let res = Cstruct.create(33);
       let b = Dsa.pub_to_cstruct(t);
@@ -142,13 +142,19 @@ module P256 = {
       );
 
     let decompress = string => {
-      let buf = Cstruct.of_string(string);      
+      let buf = Cstruct.of_string(string);
       let res = Cstruct.create(65);
-      let x = Cstruct.sub(buf, 1, 32) |> Cstruct.rev |> Cstruct.to_string |> Z.of_bits; // this is wildly incorrent???
+      let x =
+        Cstruct.sub(buf, 1, 32)
+        |> Cstruct.rev  // zarith uses little endian for bits
+        |> Cstruct.to_string
+        |> Z.of_bits;
       let y = {
         open Z;
-        let interm = powm(x ** 3 - of_int(3) * x + b, (p + one) /< of_int(4), p)
-        let y = min(interm, p - interm)
+        // https://tools.ietf.org/id/draft-jivsov-ecc-compact-00.xml#sqrt point 4.3
+        let interm =
+          powm(x ** 3 - of_int(3) * x + b, (p + one) /< of_int(4), p);
+        let y = min(interm, p - interm);
         let y_point = Z.to_bits(y) |> Cstruct.of_string |> Cstruct.rev;
         y_point;
       };
@@ -164,15 +170,15 @@ module P256 = {
     let size = 33;
     let prefix = Base58.Prefix.p256_public_key;
     let encoding = {
-      let to_bytes = t => Dsa.pub_to_cstruct(t) |> Cstruct.to_bytes;
+      let to_bytes = t => Compress.compress(t) |> Bytes.of_string;
       let of_bytes_exn = b =>
-        Cstruct.of_bytes(b) |> Dsa.pub_of_cstruct |> Result.get_ok;
+        Bytes.to_string(b) |> Compress.decompress |> Option.get;
       Data_encoding.(conv(to_bytes, of_bytes_exn, Fixed.bytes(size)));
     };
 
-    let to_raw = t => Compresss.compress(t);
+    let to_raw = t => Compress.compress(t);
 
-    let of_raw = string => Compresss.decompress(string);
+    let of_raw = string => Compress.decompress(string);
 
     let to_string = Base58.simple_encode(~prefix, ~to_raw);
     let of_string = Base58.simple_decode(~prefix, ~of_raw);
@@ -180,7 +186,7 @@ module P256 = {
   module Hash = {
     type t = BLAKE2B_20.t;
 
-    let hash_key = t => BLAKE2B_20.hash(Compresss.compress(t));
+    let hash_key = t => BLAKE2B_20.hash(Compress.compress(t));
 
     let encoding = {
       let name = "P256.Public_key_hash";
@@ -217,7 +223,7 @@ module P256 = {
     };
     let check = (public, signature, message) => {
       let hash = BLAKE2B.hash(message);
-      let (s, r) = (
+      let (r, s) = (
         String.sub(signature, 0, 32),
         String.sub(signature, 32, 32),
       );

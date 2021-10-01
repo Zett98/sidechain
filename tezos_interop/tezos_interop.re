@@ -21,6 +21,18 @@ module Key = {
 
   let name = "Signature.Public_key";
   let title = "A Ed25519, Secp256k1, or P256 public key";
+  let to_cstruct =
+    fun
+    | P256(pub_) => Mirage_crypto_ec.P256.Dsa.pub_to_cstruct(pub_)
+    | Ed25519(pub_) => Mirage_crypto_ec.Ed25519.pub_to_cstruct(pub_);
+  let equal = (a, b) => {
+    switch (a, b) {
+    | (P256(_) as a, P256(_) as b)
+    | (Ed25519(_) as a, Ed25519(_) as b) =>
+      Cstruct.equal(to_cstruct(a), to_cstruct(b))
+    | _ => false
+    };
+  };
   let encoding = {
     open Data_encoding;
     let raw_encoding =
@@ -104,6 +116,18 @@ module Key_hash = {
       ]);
     obj1(req(name, raw_encoding));
   };
+  let get_hash =
+    fun
+    | P256(a)
+    | Ed25519(a) => a;
+  let equal = (a, b) => {
+    switch (a, b) {
+    | (P256(_) as a, P256(_) as b)
+    | (Ed25519(_) as a, Ed25519(_) as b) =>
+      BLAKE2B_20.compare(get_hash(a), get_hash(b)) |> Int.equal(0)
+    | _ => false
+    };
+  };
 
   let of_key = t =>
     switch (t) {
@@ -137,6 +161,18 @@ module Secret = {
     fun
     | Ed25519(secret) => Ed25519.Secret.to_string(secret)
     | P256(secret) => P256.Secret.to_string(secret);
+  let to_cstruct =
+    fun
+    | P256(priv_) => Mirage_crypto_ec.P256.Dsa.priv_to_cstruct(priv_)
+    | Ed25519(priv_) => Mirage_crypto_ec.Ed25519.priv_to_cstruct(priv_);
+  let equal = (a, b) => {
+    switch (a, b) {
+    | (P256(_) as a, P256(_) as b)
+    | (Ed25519(_) as a, Ed25519(_) as b) =>
+      Cstruct.equal(to_cstruct(a), to_cstruct(b))
+    | _ => false
+    };
+  };
   let of_string = {
     let ed25519 = string => {
       let.some secret = Ed25519.Secret.of_string(string);
@@ -153,6 +189,7 @@ module Contract_hash = {
   type t = BLAKE2B_20.t;
 
   let name = "Contract_hash";
+  let equal = (a, b) => Int.equal(0, BLAKE2B_20.compare(a, b));
   let encoding = Data_encoding.(obj1(req(name, blake2b_20_encoding)));
   let to_raw = BLAKE2B_20.to_raw_string;
   let of_raw = BLAKE2B_20.of_raw_string;
@@ -266,6 +303,13 @@ module Signature = {
     | Ed25519(Ed25519.Signature.t)
     | P256(P256.Signature.t);
 
+  let equal = (a, b) => {
+    switch (a, b) {
+    | (P256(a), P256(b))
+    | (Ed25519(a), Ed25519(b)) => String.equal(a, b)
+    | _ => false
+    };
+  };
   let sign = (secret, message) =>
     switch (secret) {
     | Secret.Ed25519(secret) =>
