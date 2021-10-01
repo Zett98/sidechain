@@ -50,7 +50,7 @@ module Signature: {
 module Contract_hash: {
   type t = BLAKE2B_20.t;
 
-  let equal: t => t => bool
+  let equal: (t, t) => bool;
   let to_string: t => string;
   let of_string: string => option(t);
 };
