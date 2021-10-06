@@ -40,4 +40,10 @@ module type Intf = {
       type Key_hash.t = BLAKE2B_20.t and
       type Secret.t = Ed25519.priv and
       type Signature.t = string;
+  module P256:
+    S with
+      type Key.t = P256.Dsa.pub_ and
+      type Key_hash.t = BLAKE2B_20.t and
+      type Secret.t = P256.Dsa.priv and
+      type Signature.t = string;
 };
