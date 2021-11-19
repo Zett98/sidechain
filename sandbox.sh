@@ -11,7 +11,7 @@ DATA_DIRECTORY="data"
 
 SIDECLI=$(esy x which sidecli)
 sidecli() {
-  eval $SIDECLI '"$@"'
+  eval $SIDECLI "$@"
 }
 
 tezos-client() {
