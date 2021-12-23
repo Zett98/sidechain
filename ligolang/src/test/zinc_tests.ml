@@ -13,8 +13,6 @@ module Executor : Executor = struct
   let hash = Fun.id
 
   let key_hash s = s ^ "hash"
-
-  let log _ = ()
 end
 (* Helpers *)
 
@@ -318,7 +316,8 @@ let get_contract_opt =
     ~expected_output:
       [
         Types.Stack_item.Variant
-          (0, Types.Stack_item.NonliteralValue (Contract ("whatever", None)));
+          ( "Some",
+            Types.Stack_item.NonliteralValue (Contract ("whatever", None)) );
       ]
 
 let match_on_sum =
@@ -335,8 +334,8 @@ let match_on_sum =
           Adt
             (MatchVariant
                [|
-                 (0, [ Core Grab; Core (Access 0); Core Return ]);
-                 ( 1,
+                 ("Some", [ Core Grab; Core (Access 0); Core Return ]);
+                 ( "None",
                    [
                      Core Grab;
                      Plain_old_data (String "Not a contract");
@@ -417,7 +416,7 @@ let nontail_match =
           Core (Access 0);
           Adt
             (MatchVariant
-               [
+               [|
                  ( "Some",
                    [
                      Core Grab;
@@ -433,7 +432,7 @@ let nontail_match =
                      Control_flow Failwith;
                      Core EndLet;
                    ] );
-               ]);
+               |]);
           Core EndLet;
           Core Grab;
           Core (Access 2);
@@ -458,7 +457,7 @@ let create_transaction =
           Core (Access 0);
           Adt
             (MatchVariant
-               [
+               [|
                  ("Some", [ Core Grab; Core (Access 0); Core EndLet ]);
                  ( "None",
                    [
@@ -467,7 +466,7 @@ let create_transaction =
                      Control_flow Failwith;
                      Core EndLet;
                    ] );
-               ]);
+               |]);
           Core EndLet;
           Core Grab;
           Core (Access 0);
@@ -499,7 +498,7 @@ let create_transaction_in_tuple =
           Core (Access 0);
           Adt
             (MatchVariant
-               [
+               [|
                  ("Some", [ Core Grab; Core (Access 0); Core EndLet ]);
                  ( "None",
                    [
@@ -508,7 +507,7 @@ let create_transaction_in_tuple =
                      Control_flow Failwith;
                      Core EndLet;
                    ] );
-               ]);
+               |]);
           Core EndLet;
           Core Grab;
           Plain_old_data (String "my string");
@@ -587,10 +586,10 @@ let bools_religo =
           Core (Access 0);
           Adt
             (MatchVariant
-               [
+               [|
                  ("False", [ Core Grab; Core (Access 3); Core Return ]);
                  ("True", [ Core Grab; Core (Access 4); Core Return ]);
-               ]);
+               |]);
         ] );
     ]
     ~expected_output:[ Types.Stack_item.Z (Plain_old_data (Bool false)) ]
@@ -619,10 +618,10 @@ let bools_ligo =
           Core (Access 0);
           Adt
             (MatchVariant
-               [
+               [|
                  ("False", [ Core Grab; Core (Access 3); Core Return ]);
                  ("True", [ Core Grab; Core (Access 4); Core Return ]);
-               ]);
+               |]);
         ] );
     ]
     ~expected_output:[ Types.Stack_item.Z (Plain_old_data (Bool false)) ]
@@ -796,7 +795,7 @@ let if_then_else =
           Core (Access 0);
           Adt
             (MatchVariant
-               [
+               [|
                  ("False", [ Core Grab; Core (Access 2); Core Return ]);
                  ( "True",
                    [
@@ -806,7 +805,7 @@ let if_then_else =
                      Operation Add;
                      Core Return;
                    ] );
-               ]);
+               |]);
         ] );
     ]
     ~expected_output:[ Types.Stack_item.Z (Plain_old_data (Num ~$4)) ]
@@ -836,10 +835,10 @@ let if_then_else_op =
           Core (Access 0);
           Adt
             (MatchVariant
-               [
+               [|
                  ("False", [ Core Grab; Core (Access 2); Core Return ]);
                  ("True", [ Core Grab; Core (Access 3); Core Return ]);
-               ]);
+               |]);
         ] );
     ]
     ~expected_output:[ Types.Stack_item.Z (Plain_old_data (Num ~$2)) ]
@@ -880,10 +879,10 @@ let if_then_else_op_function =
           Core (Access 0);
           Adt
             (MatchVariant
-               [
+               [|
                  ("False", [ Core Grab; Core (Access 7); Core Return ]);
                  ("True", [ Core Grab; Core (Access 8); Core Return ]);
-               ]);
+               |]);
         ] );
     ]
     ~initial_stack:
