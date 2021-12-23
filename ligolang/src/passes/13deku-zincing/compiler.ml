@@ -249,7 +249,7 @@ and compile_constant :
   | C_CONTRACT_OPT -> Domain_specific_operation Contract_opt :: k
   | C_CALL -> Domain_specific_operation MakeTransaction :: k
   | C_UNIT -> Adt (MakeRecord 0) :: k
-  | C_NONE -> Adt (MakeRecord 0) :: Adt (MakeVariant "None") :: k
+  | C_NONE -> Adt (MakeRecord "None") :: Adt (MakeVariant 1) :: k
   | C_SOME -> Adt (MakeVariant "Some") :: k
   | C_CONS -> Operation Cons :: k
   | C_LIST_EMPTY -> Plain_old_data Nil :: k
@@ -398,7 +398,8 @@ and compile_pattern_matching :
                     :: compile_match_code (add_binder pattern environment) body
                   in
                   (label, compiled))
-                cases))
+                cases
+             |> List.to_array))
       in
       other_compile environment matchee ~k:(code :: k)
   | T_base TB_bool, { cases; _ } ->
@@ -418,7 +419,8 @@ and compile_pattern_matching :
                     :: compile_match_code (add_binder pattern environment) body
                   in
                   (label, compiled))
-                cases))
+                cases
+             |> List.to_array))
       in
       other_compile environment matchee ~k:(code :: k)
   | _ ->

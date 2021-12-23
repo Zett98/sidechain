@@ -69,7 +69,7 @@ module Make (D : Domain_types) = struct
       | MakeRecord of int
       | RecordAccess of label
       | MakeVariant of variant_label
-      | MatchVariant of (variant_label * t) list
+      | MatchVariant of (variant_label * t) array
     [@@deriving show {with_path = false}, eq, yojson]
 
     and operation = Eq | Add | Cons | HashKey | Or | And | Not

@@ -13,6 +13,8 @@ module Executor : Executor = struct
   let hash = Fun.id
 
   let key_hash s = s ^ "hash"
+
+  let log _ = ()
 end
 (* Helpers *)
 
@@ -316,8 +318,7 @@ let get_contract_opt =
     ~expected_output:
       [
         Types.Stack_item.Variant
-          ( "Some",
-            Types.Stack_item.NonliteralValue (Contract ("whatever", None)) );
+          (0, Types.Stack_item.NonliteralValue (Contract ("whatever", None)));
       ]
 
 let match_on_sum =
@@ -333,16 +334,16 @@ let match_on_sum =
           Core (Access 0);
           Adt
             (MatchVariant
-               [
-                 ("Some", [ Core Grab; Core (Access 0); Core Return ]);
-                 ( "None",
+               [|
+                 (0, [ Core Grab; Core (Access 0); Core Return ]);
+                 ( 1,
                    [
                      Core Grab;
                      Plain_old_data (String "Not a contract");
                      Control_flow Failwith;
                      Core Return;
                    ] );
-               ]);
+               |]);
         ] );
     ]
     ~expected_output:

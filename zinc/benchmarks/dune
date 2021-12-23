@@ -1,0 +1,4 @@
+(executable
+ (name runner)
+ (public_name runner)
+ (libraries zinc.utils zinc.interpreter zinc.types core_bench))
