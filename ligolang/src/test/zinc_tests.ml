@@ -316,8 +316,7 @@ let get_contract_opt =
     ~expected_output:
       [
         Types.Stack_item.Variant
-          ( "Some",
-            Types.Stack_item.NonliteralValue (Contract ("whatever", None)) );
+          (0, Types.Stack_item.NonliteralValue (Contract ("whatever", None)));
       ]
 
 let match_on_sum =
@@ -334,14 +333,13 @@ let match_on_sum =
           Adt
             (MatchVariant
                [|
-                 ("Some", [ Core Grab; Core (Access 0); Core Return ]);
-                 ( "None",
-                   [
-                     Core Grab;
-                     Plain_old_data (String "Not a contract");
-                     Control_flow Failwith;
-                     Core Return;
-                   ] );
+                 [ Core Grab; Core (Access 0); Core Return ];
+                 [
+                   Core Grab;
+                   Plain_old_data (String "Not a contract");
+                   Control_flow Failwith;
+                   Core Return;
+                 ];
                |]);
         ] );
     ]
@@ -409,7 +407,7 @@ let nontail_match =
           Plain_old_data (Num ~$4);
           Core Grab;
           Plain_old_data (Num ~$3);
-          Adt (MakeVariant "Some");
+          Adt (MakeVariant 0);
           Core Grab;
           Core (Access 0);
           Core Grab;
@@ -417,21 +415,19 @@ let nontail_match =
           Adt
             (MatchVariant
                [|
-                 ( "Some",
-                   [
-                     Core Grab;
-                     Plain_old_data (Num ~$5);
-                     Core (Access 0);
-                     Operation Add;
-                     Core EndLet;
-                   ] );
-                 ( "None",
-                   [
-                     Core Grab;
-                     Plain_old_data (String "should be some >:(");
-                     Control_flow Failwith;
-                     Core EndLet;
-                   ] );
+                 [
+                   Core Grab;
+                   Plain_old_data (Num ~$5);
+                   Core (Access 0);
+                   Operation Add;
+                   Core EndLet;
+                 ];
+                 [
+                   Core Grab;
+                   Plain_old_data (String "should be some >:(");
+                   Control_flow Failwith;
+                   Core EndLet;
+                 ];
                |]);
           Core EndLet;
           Core Grab;
@@ -458,14 +454,13 @@ let create_transaction =
           Adt
             (MatchVariant
                [|
-                 ("Some", [ Core Grab; Core (Access 0); Core EndLet ]);
-                 ( "None",
-                   [
-                     Core Grab;
-                     Plain_old_data (String "Not a contract");
-                     Control_flow Failwith;
-                     Core EndLet;
-                   ] );
+                 [ Core Grab; Core (Access 0); Core EndLet ];
+                 [
+                   Core Grab;
+                   Plain_old_data (String "Not a contract");
+                   Control_flow Failwith;
+                   Core EndLet;
+                 ];
                |]);
           Core EndLet;
           Core Grab;
@@ -499,14 +494,13 @@ let create_transaction_in_tuple =
           Adt
             (MatchVariant
                [|
-                 ("Some", [ Core Grab; Core (Access 0); Core EndLet ]);
-                 ( "None",
-                   [
-                     Core Grab;
-                     Plain_old_data (String "Not a contract");
-                     Control_flow Failwith;
-                     Core EndLet;
-                   ] );
+                 [ Core Grab; Core (Access 0); Core EndLet ];
+                 [
+                   Core Grab;
+                   Plain_old_data (String "Not a contract");
+                   Control_flow Failwith;
+                   Core EndLet;
+                 ];
                |]);
           Core EndLet;
           Core Grab;
@@ -587,8 +581,8 @@ let bools_religo =
           Adt
             (MatchVariant
                [|
-                 ("False", [ Core Grab; Core (Access 3); Core Return ]);
-                 ("True", [ Core Grab; Core (Access 4); Core Return ]);
+                 [ Core Grab; Core (Access 3); Core Return ];
+                 [ Core Grab; Core (Access 4); Core Return ];
                |]);
         ] );
     ]
@@ -619,8 +613,8 @@ let bools_ligo =
           Adt
             (MatchVariant
                [|
-                 ("False", [ Core Grab; Core (Access 3); Core Return ]);
-                 ("True", [ Core Grab; Core (Access 4); Core Return ]);
+                 [ Core Grab; Core (Access 3); Core Return ];
+                 [ Core Grab; Core (Access 4); Core Return ];
                |]);
         ] );
     ]
@@ -796,15 +790,14 @@ let if_then_else =
           Adt
             (MatchVariant
                [|
-                 ("False", [ Core Grab; Core (Access 2); Core Return ]);
-                 ( "True",
-                   [
-                     Core Grab;
-                     Plain_old_data (Num ~$2);
-                     Core (Access 3);
-                     Operation Add;
-                     Core Return;
-                   ] );
+                 [ Core Grab; Core (Access 2); Core Return ];
+                 [
+                   Core Grab;
+                   Plain_old_data (Num ~$2);
+                   Core (Access 3);
+                   Operation Add;
+                   Core Return;
+                 ];
                |]);
         ] );
     ]
@@ -836,8 +829,8 @@ let if_then_else_op =
           Adt
             (MatchVariant
                [|
-                 ("False", [ Core Grab; Core (Access 2); Core Return ]);
-                 ("True", [ Core Grab; Core (Access 3); Core Return ]);
+                 [ Core Grab; Core (Access 2); Core Return ];
+                 [ Core Grab; Core (Access 3); Core Return ];
                |]);
         ] );
     ]
@@ -880,8 +873,8 @@ let if_then_else_op_function =
           Adt
             (MatchVariant
                [|
-                 ("False", [ Core Grab; Core (Access 7); Core Return ]);
-                 ("True", [ Core Grab; Core (Access 8); Core Return ]);
+                 [ Core Grab; Core (Access 7); Core Return ];
+                 [ Core Grab; Core (Access 8); Core Return ];
                |]);
         ] );
     ]
@@ -897,16 +890,16 @@ let if_then_else_op_function =
 let make_an_option =
   expect_simple_compile_to ~dialect:ReasonLIGO "make_an_option"
     [
-      ("a", [ Adt (MakeRecord 0); Adt (MakeVariant "None"); Core Return ]);
+      ("a", [ Adt (MakeRecord 0); Adt (MakeVariant 1); Core Return ]);
       ( "b",
         [
           Adt (MakeRecord 0);
           (* constructing None, from the definition of a *)
-          Adt (MakeVariant "None");
+          Adt (MakeVariant 1);
           Core Grab;
           Adt (MakeRecord 0);
           (* constructing Some *)
-          Adt (MakeVariant "Some");
+          Adt (MakeVariant 0);
           Core Return;
         ] );
     ]
@@ -914,16 +907,16 @@ let make_an_option =
 let make_a_custom_option =
   expect_simple_compile_to ~dialect:ReasonLIGO "make_a_custom_option"
     [
-      ("a", [ Adt (MakeRecord 0); Adt (MakeVariant "My_none"); Core Return ]);
+      ("a", [ Adt (MakeRecord 0); Adt (MakeVariant 0); Core Return ]);
       ( "b",
         [
           Adt (MakeRecord 0);
           (* constructing My_none, from the definition of a *)
-          Adt (MakeVariant "My_none");
+          Adt (MakeVariant 0);
           Core Grab;
           Adt (MakeRecord 0);
           (* constructing Some *)
-          Adt (MakeVariant "My_some");
+          Adt (MakeVariant 1);
           Core Return;
         ] );
     ]

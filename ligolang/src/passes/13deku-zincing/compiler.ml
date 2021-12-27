@@ -192,8 +192,25 @@ and other_compile :
         { cons_name = C_FALSE; arguments = [] }
         ~k
   | E_constructor { constructor = Label constructor; element } ->
+      print_endline
+      @@ Format.asprintf "example %a\n" AST.PP.type_content
+           expr.type_expression.type_content;
+      let rows =
+        expr.type_expression.type_content |> function
+        | T_sum r | T_record r -> LMap.keys r.content
+        | T_constant const ->
+            (* this is very bad *)
+            if Ligo_string.extract const.injection = "option" then
+              [ Label "Some"; Label "None" ]
+            else []
+        | x -> failwith @@ Format.asprintf "%a\n" AST.PP.type_content x
+      in
+      let idx, _ =
+        List.findi ~f:(fun _ (Label x) -> constructor = x) rows
+        |> Stdlib.Option.get
+      in
       compile_known_function_application environment
-        (fun ~k -> Adt (MakeVariant constructor) :: k)
+        (fun ~k -> Adt (MakeVariant idx) :: k)
         [ element ] ~k
   | E_matching { matchee; cases = Match_record match_record } ->
       other_compile environment (match_record_rewrite ~matchee match_record) ~k
@@ -249,8 +266,8 @@ and compile_constant :
   | C_CONTRACT_OPT -> Domain_specific_operation Contract_opt :: k
   | C_CALL -> Domain_specific_operation MakeTransaction :: k
   | C_UNIT -> Adt (MakeRecord 0) :: k
-  | C_NONE -> Adt (MakeRecord 0) :: Adt (MakeVariant "None") :: k
-  | C_SOME -> Adt (MakeVariant "Some") :: k
+  | C_NONE -> Adt (MakeRecord 0) :: Adt (MakeVariant 1) :: k
+  | C_SOME -> Adt (MakeVariant 0) :: k
   | C_CONS -> Operation Cons :: k
   | C_LIST_EMPTY -> Plain_old_data Nil :: k
   | C_TRUE -> Plain_old_data (Bool true) :: k
@@ -376,6 +393,15 @@ and compile_pattern_matching :
   let other_compile = other_compile ~raise in
   let compile_type = compile_type ~raise in
   let compiled_type = compile_type matchee.type_expression in
+  let rows =
+    matchee.type_expression.type_content |> function
+    | T_sum r | T_record r -> LMap.keys r.content
+    | T_constant const ->
+        if Ligo_string.extract const.injection = "option" then
+          [ Label "Some"; Label "None" ]
+        else []
+    | x -> failwith @@ Format.asprintf "%a\n" AST.PP.type_content x
+  in
   match (compiled_type, cases) with
   | T_option _, { cases; _ } ->
       let code =
@@ -399,7 +425,21 @@ and compile_pattern_matching :
                   in
                   (label, compiled))
                 cases
-             |> List.to_array))
+             |> List.sort ~compare:(fun (x, _) (y, _) ->
+                    print_endline x;
+                    print_endline y;
+                    let x', _ =
+                      List.findi ~f:(fun _ (Label label) -> label = x) rows
+                      |> Stdlib.Option.get
+                    in
+
+                    let y', _ =
+                      List.findi ~f:(fun _ (Label label) -> label = y) rows
+                      |> Stdlib.Option.get
+                    in
+                    Int.compare x' y')
+             |> List.map ~f:(fun (_, x) -> x)
+             |> Zinc_utils.LMap.of_list))
       in
       other_compile environment matchee ~k:(code :: k)
   | T_base TB_bool, { cases; _ } ->
@@ -420,7 +460,19 @@ and compile_pattern_matching :
                   in
                   (label, compiled))
                 cases
-             |> List.to_array))
+             |> List.sort ~compare:(fun (x, _) (y, _) ->
+                    let x', _ =
+                      List.findi ~f:(fun _ (Label label) -> label = x) rows
+                      |> Stdlib.Option.get
+                    in
+
+                    let y', _ =
+                      List.findi ~f:(fun _ (Label label) -> label = y) rows
+                      |> Stdlib.Option.get
+                    in
+                    Int.compare x' y')
+             |> List.map ~f:(fun (_, x) -> x)
+             |> Zinc_utils.LMap.of_list))
       in
       other_compile environment matchee ~k:(code :: k)
   | _ ->

@@ -197,8 +197,8 @@ let prog3 =
         Adt
           (MatchVariant
              [|
-               ("False", [Core Grab; Core (Access 7); Core Return]);
-               ("True", [Core Grab; Core (Access 8); Core Return]);
+               ( [Core Grab; Core (Access 7); Core Return]);
+               ( [Core Grab; Core (Access 8); Core Return]);
              |]);
       ] );
   ]

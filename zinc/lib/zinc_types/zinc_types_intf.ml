@@ -163,8 +163,8 @@ module type S = sig
     and adt =
       | MakeRecord of int
       | RecordAccess of int
-      | MakeVariant of variant_label
-      | MatchVariant of (variant_label * t) array
+      | MakeVariant of label
+      | MatchVariant of t LMap.t
 
     and operation = Eq | Add | Cons | HashKey | Or | And | Not
 
@@ -208,7 +208,7 @@ module type S = sig
       | Clos of Clos.t
       | Record of Stack_item.t LMap.t
       | List of Stack_item.t list
-      | Variant of Zinc_utils.variant_label * Stack_item.t
+      | Variant of Zinc_utils.label * Stack_item.t
 
     include With_default_derivation with type t := t
   end
@@ -220,7 +220,7 @@ module type S = sig
       | Clos of Clos.t
       | Record of t LMap.t
       | List of t list
-      | Variant of Zinc_utils.variant_label * t
+      | Variant of Zinc_utils.label * t
       | Marker of Zinc.t * Env_item.t list
 
     include With_default_derivation with type t := t

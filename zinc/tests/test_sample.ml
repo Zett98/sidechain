@@ -14,8 +14,8 @@ let zinc =
       Adt
         (MatchVariant
            [|
-             ("Some", [Core Grab; Core (Access 0)]);
-             ( "None",
+             ( [Core Grab; Core (Access 0)]);
+             (
                [
                  Core Grab;
                  Plain_old_data (String "Not a contract");
