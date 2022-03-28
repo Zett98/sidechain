@@ -9,6 +9,7 @@ let to_key_hash t =
   match t with
   | Implicit implicit -> Some implicit
   | _ -> None
+
 let to_contract_hash t =
   match t with
   | Implicit _key_hash -> None

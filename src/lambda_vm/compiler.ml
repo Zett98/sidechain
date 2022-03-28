@@ -31,7 +31,10 @@ let compile_prim prim =
   | Fst -> P_fst
   | Snd -> P_snd
 
-module Vars = Map_with_cardinality.Make (String)
+module Vars = Map_with_cardinality.Make (struct
+  include String
+  type t = string [@@deriving yojson]
+end)
 
 let burn_gas gas vars code =
   match code with
@@ -107,7 +110,8 @@ let compile gas script =
 let compile gas script =
   try Ok (compile gas script) with
   | Error error -> Error error
-
+  | Checks.Out_of_stack -> Error `Out_of_stack
+  | Gas.Out_of_gas -> Error `Out_of_gas
 let burn_gas gas = Gas.burn_constant gas
 
 let rec compile_value ~stack gas value =
@@ -126,6 +130,7 @@ let rec compile_value ~stack gas value =
 let compile_value gas value =
   let stack = max_stack_depth in
   compile_value ~stack gas value
+
 let compile_value gas value =
   try Ok (compile_value gas value) with
   | Error error -> Error error
