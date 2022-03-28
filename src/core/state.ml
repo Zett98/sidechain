@@ -36,6 +36,40 @@ let apply_user_operation t user_operation =
     let%ok ledger =
       Ledger.transfer ~sender ~destination amount ticket t.ledger in
     Ok ({ contract_storage = t.contract_storage; ledger }, None)
+  | Contract_invocation { to_invoke; argument } ->
+    (* let balance = Ledger.balance sender ticket t.ledger in *)
+    (* TODO: find good transaction cost *)
+    (* let invocation_cost = 250 in *)
+    (* let%assert () =
+         Amount.
+           ( `Invocation_error t,
+             let comparison_result = compare balance (of_int invocation_cost) in
+             comparison_result >= 0 ) in
+       let%assert () =
+         Amount.
+           ( `Origination_error
+               {
+                 t with
+                 ledger = Ledger.burn t.ledger ~sender ~ticket ~amount:balance;
+               },
+             let comparison_result =
+               compare (balance - of_int invocation_cost) amount in
+             comparison_result >= 0 ) in *)
+    (* no limit for computation right now*)
+    let initial_gas = 100_000 in
+    let burn_and_update t _ _ = `Invocation_error t in
+    let%ok contract =
+      Contract_storage.get_contract t.contract_storage ~address:to_invoke
+      |> Option.fold
+           ~none:(Error (burn_and_update t "Contract not found" 0))
+           ~some:Result.ok in
+    let%ok contract, _to_burn =
+      Smart_contracts.Contract.Interpreter.invoke ~arg:argument ~gas:initial_gas
+        ~on_error:(burn_and_update t) contract in
+    let contract_storage =
+      Contract_storage.update_contract_storage t.contract_storage
+        ~address:to_invoke ~updated_contract:contract in
+    Ok ({ ledger = t.ledger; contract_storage }, None)
   | Tezos_withdraw { owner; amount; ticket } ->
     let%ok ledger, handle =
       Ledger.withdraw ~sender ~destination:owner amount ticket t.ledger in
@@ -67,7 +101,7 @@ let apply_user_operation t user_operation =
 let apply_user_operation t user_operation =
   match apply_user_operation t user_operation with
   | Ok (t, receipt) -> (t, receipt)
-  | Error (`Origination_error t) -> (t, None)
+  | Error (`Origination_error t | `Invocation_error t) -> (t, None)
   | Error
       ( `Not_enough_funds | `Transaction_sender_must_be_implicit_account
       | `Withdraw_sender_must_be_implicit_account

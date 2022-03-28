@@ -15,7 +15,10 @@ module Origination_payload : sig
   val make_lambda :
     code:Raw.Script.t -> storage:Raw.Value.t -> (t, string) result
 end
-
+module Invocation_payload : sig
+  type t [@@deriving yojson]
+  val make_lambda : arg:Raw.Value.t -> (t, string) result
+end
 module Contract : sig
   type t [@@deriving yojson, eq]
   val to_string : t -> string
@@ -26,6 +29,19 @@ module Contract : sig
       gas:int ->
       on_error:(string -> int -> 'a) ->
       originated_by:Key_hash.t ->
+      (t * int, 'a) result
+  end
+  module Interpreter : sig
+    module Arg : sig
+      type t [@@deriving yojson]
+    end
+
+    (* currently we dont return User_operation.t list from contract invocations *)
+    val invoke :
+      t ->
+      arg:Invocation_payload.t ->
+      gas:int ->
+      on_error:(string -> int -> 'a) ->
       (t * int, 'a) result
   end
 end

@@ -9,6 +9,10 @@ type initial_operation =
   | Contract_origination of {
       to_originate : Smart_contracts.Origination_payload.t;
     }
+  | Contract_invocation  of {
+      to_invoke : Tezos.Contract_hash.t;
+      argument : Smart_contracts.Invocation_payload.t;
+    }
   | Tezos_withdraw       of {
       owner : Tezos.Address.t;
       amount : Amount.t;

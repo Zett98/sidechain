@@ -21,9 +21,25 @@ module type VM = sig
     val originated_by : t -> Key_hash.t
     val to_string : t -> string
   end
+
   module Origination_payload : sig
     type t [@@deriving yojson]
     val make : code:Raw.Script.t -> storage:Raw.Value.t -> (t, string) result
+  end
+
+  module Invocation_payload : sig
+    type t [@@deriving yojson]
+    val make : arg:Raw.Value.t -> (t, string) result
+  end
+  module Vm : sig
+    type invocation_result
+    val updated_contract : invocation_result -> Contract.t
+    val invoke :
+      Contract.t ->
+      arg:Invocation_payload.t ->
+      gas:int ->
+      on_error:(string -> int -> 'error) ->
+      (invocation_result * int, 'error) result
   end
 
   module Compile : sig
@@ -51,6 +67,8 @@ module Lambda : VM = struct
       { code; storage; originated_by = originator }
 
     let to_string t = to_yojson t |> Yojson.Safe.pretty_to_string
+
+    let update_storage t new_storage = { t with storage = new_storage }
     let originated_by t = t.originated_by
   end
 
@@ -98,6 +116,18 @@ module Lambda : VM = struct
         |> handle_failure ~msg:"failed to parse the storage" in
       Ok { code; storage }
   end
+
+  module Invocation_payload = struct
+    type t = { arg : Raw.Value.t } [@@deriving yojson]
+    let handle_failure t ~msg = Result.map_error (fun _ -> msg) t
+
+    let make ~arg =
+      let%ok arg =
+        Raw.Value.of_yojson arg
+        |> handle_failure ~msg:"failed to parse the argument" in
+      Ok { arg }
+  end
+
   module Compile = struct
     let error_to_string : Raw.Errors.t -> string = function
       | `Out_of_gas -> "Out of gas"
@@ -121,6 +151,44 @@ module Lambda : VM = struct
         ( Contract.make ~originator:originated_by ~code ~storage,
           initial_gas - Gas.to_int gas )
   end
+  module Vm = struct
+    type invocation_result = {
+      contract : Contract.t;
+      result : Lambda_vm.Interpreter.script_result;
+    }
+    let updated_contract t = t.contract
+    let error_to_string : Lambda_vm.Interpreter.error -> string = function
+      | `Out_of_gas -> "Out of gas"
+      | `Out_of_stack -> "Out of stack"
+      | `Value_is_not_pair
+      | `Value_is_not_function
+      | `Value_is_not_zero
+      | `Value_is_not_int64 ->
+        "Invalid argument passed to the contract/Error within contract code"
+      | `Undefined_variable
+      | `Over_applied_primitives ->
+        failwith "Bug within Lambda_vm interpreter"
+
+    let invoke contract ~(arg : Invocation_payload.t) ~gas ~on_error =
+      let open Lambda_vm in
+      let initial_gas = gas in
+      let gas = Gas.make ~initial_gas:gas in
+      let%ok argument =
+        Raw.Value.to_value ~gas arg.arg
+        |> Result.map_error (fun x ->
+               on_error (Compile.error_to_string x) initial_gas) in
+      let%ok invoked =
+        Interpreter.execute gas ~arg:argument contract.Contract.code
+        |> Result.map_error (fun x -> on_error (error_to_string x) initial_gas)
+      in
+      Ok
+        ( {
+            contract =
+              Contract.update_storage contract invoked.Interpreter.storage;
+            result = invoked;
+          },
+          initial_gas - Gas.to_int gas )
+  end
 end
 
 module Origination_payload = struct
@@ -131,6 +199,17 @@ module Origination_payload = struct
   let make_lambda ~code ~storage : (t, string) result =
     (* ppx errors here for some reason *)
     let originated = Lambda.Origination_payload.make ~code ~storage in
+    Result.map (fun x -> Lambda x) originated
+end
+
+module Invocation_payload = struct
+  type t =
+    | Lambda of Lambda.Invocation_payload.t
+    | Dummy
+  [@@deriving yojson]
+  let make_lambda ~arg : (t, string) result =
+    (* ppx errors here for some reason *)
+    let originated = Lambda.Invocation_payload.make ~arg in
     Result.map (fun x -> Lambda x) originated
 end
 
@@ -145,6 +224,27 @@ module Contract = struct
   let originated_by = function
     | Lambda contract -> Lambda.Contract.originated_by contract
     | Dummy _ -> failwith "unimplemented"
+  module Interpreter = struct
+    module Arg = struct
+      type t =
+        | Lambda of Lambda.Invocation_payload.t
+        | Dummy  of bytes
+      [@@deriving yojson]
+    end
+
+    let invoke contract ~arg ~gas ~on_error =
+      match (contract, arg) with
+      | Dummy _, Invocation_payload.Dummy -> failwith "unimplemented"
+      | Dummy _, Lambda _
+      | Lambda _, Dummy ->
+        Error (on_error "Mismathced argument and contract types" 0)
+      | Lambda contract, Lambda arg ->
+        let compiled = Lambda.Vm.invoke ~arg ~gas ~on_error contract in
+        Result.map
+          (fun (compiled, gas) ->
+            (Lambda (compiled |> Lambda.Vm.updated_contract), gas))
+          compiled
+  end
   module Compile = struct
     let compile_script t ~gas ~on_error ~originated_by =
       match t with
