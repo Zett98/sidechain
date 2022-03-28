@@ -26,8 +26,7 @@ let append_block ~pool (block, signatures) t =
     t
   else
     let blocks, (block, signatures) =
-      Block_pool.find_all_signed_blocks_above (block, signatures) pool
-    in
+      Block_pool.find_all_signed_blocks_above (block, signatures) pool in
     {
       current_snapshot = t.current_snapshot;
       next_snapshots = t.next_snapshots;
@@ -50,13 +49,11 @@ let start_new_epoch t =
     match blocks with
     | hd :: tl when hd.Block.block_height > block_height ->
       hd :: truncate_additional_blocks block_height tl
-    | _ -> []
-  in
+    | _ -> [] in
   match t.next_snapshots with
   | (height, snapshot) :: tl ->
     let additional_blocks =
-      truncate_additional_blocks height t.additional_blocks
-    in
+      truncate_additional_blocks height t.additional_blocks in
     {
       current_snapshot = snapshot;
       next_snapshots = tl;

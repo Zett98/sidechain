@@ -45,8 +45,7 @@ end) : S with type key = K.t = struct
       if Map.mem key values then
         cardinality
       else
-        cardinality + 1
-    in
+        cardinality + 1 in
     let values = Map.add key value values in
     { cardinality; values }
 

@@ -40,8 +40,7 @@ let fetch_block_operations ~block_hash () =
    It also doesn't show in the terminal, so use dune exec *)
 let listen_to_chain_heads () =
   let%await result =
-    Tezos_rpc.Listen_to_chain_heads.execute ~node_uri ~chain:None
-  in
+    Tezos_rpc.Listen_to_chain_heads.execute ~node_uri ~chain:None in
   match result with
   | Ok stream ->
     Lwt_stream.iter

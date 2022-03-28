@@ -16,50 +16,42 @@ let () =
               Random.generate 20
               |> Cstruct.to_string
               |> BLAKE2B_20.of_raw_string
-              |> Option.get
-            in
+              |> Option.get in
             Address.Originated { contract = random_hash; entrypoint = None }
         in
         let data =
           match data with
           | Some data -> data
-          | None -> Random.generate 256 |> Cstruct.to_bytes
-        in
+          | None -> Random.generate 256 |> Cstruct.to_bytes in
         let open Ticket_id in
-        { ticketer; data }
-      in
+        { ticketer; data } in
       let make_address () =
         let _secret, _key, key_hash = Key_hash.make_ed25519 () in
-        key_hash
-      in
+        key_hash in
       let make_tezos_address () =
         let open Crypto in
         let open Tezos in
         let _key, address = Ed25519.generate () in
         let hash = Ed25519.Key_hash.of_key address in
-        Address.Implicit (Ed25519 hash)
-      in
+        Address.Implicit (Ed25519 hash) in
       let setup_two () =
         let t1 = make_ticket () in
         let t2 = make_ticket () in
-        let a = make_address () in
-        let b = make_address () in
+        let a = make_address () |> Address.of_key_hash in
+        let b = make_address () |> Address.of_key_hash in
         let t =
           empty
           |> deposit a (Amount.of_int 100) t1
           |> deposit a (Amount.of_int 300) t2
           |> deposit b (Amount.of_int 200) t1
-          |> deposit b (Amount.of_int 400) t2
-        in
-        (t, (t1, t2), (a, b))
-      in
+          |> deposit b (Amount.of_int 400) t2 in
+        (t, (t1, t2), (a, b)) in
       let test name f =
         test name (fun { expect; _ } ->
             let expect_balance address ticket expected t =
               expect.equal (Amount.of_int expected) (balance address ticket t)
             in
-            f expect expect_balance)
-      in
+            f expect expect_balance) in
       test "amount" (fun expect _ ->
           expect.equal
             (let open Amount in
@@ -73,13 +65,13 @@ let () =
           expect_balance a t2 300 t;
           expect_balance b t1 200 t;
           expect_balance b t2 400 t;
-          expect_balance (make_address ()) t1 0 t;
-          expect_balance (make_address ()) t2 0 t;
+          expect_balance (make_address () |> Address.of_key_hash) t1 0 t;
+          expect_balance (make_address () |> Address.of_key_hash) t2 0 t;
           expect_balance a (make_ticket ()) 0 t;
           expect_balance b (make_ticket ()) 0 t);
       test "transfer" (fun expect expect_balance ->
           let t, (t1, t2), (a, b) = setup_two () in
-          let c = make_address () in
+          let c = make_address () |> Address.of_key_hash in
           let t = transfer ~sender:a ~destination:b (Amount.of_int 1) t1 t in
           (expect.result t).toBeOk ();
           let t = Result.get_ok t in
@@ -119,7 +111,7 @@ let () =
           (let t = transfer ~sender:b ~destination:c (Amount.of_int 202) t1 t in
            (expect.result t).toBeError ();
            expect.equal (Result.get_error t) `Not_enough_funds);
-          (let d = make_address () in
+          (let d = make_address () |> Address.of_key_hash in
            let t = transfer ~sender:d ~destination:c (Amount.of_int 1) t2 t in
            (expect.result t).toBeError ();
            expect.equal (Result.get_error t) `Not_enough_funds);
@@ -177,7 +169,7 @@ let () =
            (expect.result t).toBeError ());
           (let t = withdraw ~sender:b ~destination (Amount.of_int 203) t1 t in
            (expect.result t).toBeError ());
-          (let c = make_address () in
+          (let c = make_address () |> Address.of_key_hash in
            let t = withdraw ~sender:c ~destination (Amount.of_int 1) t1 t in
            (expect.result t).toBeError ());
           ());

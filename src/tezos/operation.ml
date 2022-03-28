@@ -28,16 +28,14 @@ let encoding =
         match proj x with
         | None -> None
         | Some x -> Some ((), x))
-      (fun ((), x) -> inj x)
-  in
+      (fun ((), x) -> inj x) in
   let operation_header_encoding =
     obj5
       (req "source" Key_hash.encoding)
       (req "fee" Tez.encoding)
       (req "counter" (check_size 10 n))
       (req "gas_limit" (check_size 10 Gas.n_integral_encoding))
-      (req "storage_limit" (check_size 10 n))
-  in
+      (req "storage_limit" (check_size 10 n)) in
 
   let make_operation_case ~tag ~name ~encoding to_ from =
     case (Tag tag) name
@@ -49,8 +47,7 @@ let encoding =
         | None -> None)
       (fun ((source, fee, counter, gas_limit, storage_limit), content) ->
         let content = from content in
-        { source; fee; counter; gas_limit; storage_limit; content })
-  in
+        { source; fee; counter; gas_limit; storage_limit; content }) in
 
   let module Transaction = struct
     let entrypoint_encoding =
@@ -61,8 +58,7 @@ let encoding =
       let builtin_case tag name =
         Data_encoding.case (Tag tag) ~title:name (constant name)
           (fun n -> if String.equal n name then Some () else None)
-          (fun () -> name)
-      in
+          (fun () -> name) in
       union
         [
           builtin_case 0 "default";
@@ -91,15 +87,13 @@ let encoding =
             if String.equal entrypoint "default" && Michelson.is_unit value then
               None
             else
-              Some (entrypoint, value)
-          in
+              Some (entrypoint, value) in
           (amount, destination, parameters))
         (fun (amount, destination, parameters) ->
           let entrypoint, value =
             match parameters with
             | Some (entrypoint, value) -> (entrypoint, value)
-            | None -> ("default", Michelson.unit)
-          in
+            | None -> ("default", Michelson.unit) in
           { amount; destination; entrypoint; value })
         encoding
 
@@ -128,13 +122,11 @@ let optional_signature_encoding =
       conv Signature.to_raw
         (* this is reasonable as this encoding is not used to decode *)
           (fun _ -> failwith "unreachable")
-        (Fixed.string Signature.size)
-    in
+        (Fixed.string Signature.size) in
     let name = "Signature" in
     let title = "A Ed25519, Secp256k1 or P256 signature" in
     Encoding_helpers.make_encoding ~name ~title ~to_string:Signature.to_string
-      ~of_string:Signature.of_string ~raw_encoding
-  in
+      ~of_string:Signature.of_string ~raw_encoding in
   conv
     (function
       | Some s -> s
@@ -176,8 +168,7 @@ let forge ~secret ~branch ~operations =
     let operation_bytes = Bytes.to_string operation_bytes in
     let operation_bytes_with_watermark = watermark ^ operation_bytes in
     let hash = BLAKE2B.hash operation_bytes_with_watermark in
-    Signature.sign secret hash
-  in
+    Signature.sign secret hash in
   (operation_bytes, signature)
 
 let make_preapply_json ~secret ~protocol ~branch ~operations =
@@ -190,9 +181,7 @@ let make_preapply_json ~secret ~protocol ~branch ~operations =
 let forge ~secret ~branch ~operations =
   let operation_bytes, signature = forge ~secret ~branch ~operations in
   let operation_with_signature_bytes =
-    Bytes.to_string operation_bytes ^ Signature.to_raw signature
-  in
+    Bytes.to_string operation_bytes ^ Signature.to_raw signature in
   let (`Hex operation_with_signature_hex) =
-    Hex.of_string operation_with_signature_bytes
-  in
+    Hex.of_string operation_with_signature_bytes in
   operation_with_signature_hex

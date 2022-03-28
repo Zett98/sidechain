@@ -12,13 +12,10 @@ let make_file ~prefix content =
 let file_fetch_storage, file_run_entrypoint, file_listen_transactions =
   Lwt_main.run
     (let%await file_fetch_storage =
-       make_file ~prefix:"fetch_storage" fetch_storage
-     in
+       make_file ~prefix:"fetch_storage" fetch_storage in
      let%await file_run_entrypoint =
-       make_file ~prefix:"run_entrypoint" run_entrypoint
-     in
+       make_file ~prefix:"run_entrypoint" run_entrypoint in
      let%await file_listen_transactions =
-       make_file ~prefix:"listen_transactions" listen_transactions
-     in
+       make_file ~prefix:"listen_transactions" listen_transactions in
      Lwt.return
        (file_fetch_storage, file_run_entrypoint, file_listen_transactions))

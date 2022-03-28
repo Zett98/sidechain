@@ -1,7 +1,7 @@
 open Crypto
 open Helpers
 type t =
-  | Implicit of Key_hash.t
+  | Implicit   of Key_hash.t
   | Originated of {
       contract : Contract_hash.t;
       entrypoint : string option;
@@ -16,8 +16,7 @@ let to_string = function
 let of_string =
   let implicit string =
     let%some implicit = Key_hash.of_string string in
-    Some (Implicit implicit)
-  in
+    Some (Implicit implicit) in
   let originated string =
     let%some contract, entrypoint =
       match String.split_on_char '%' string with
@@ -25,11 +24,9 @@ let of_string =
       | [contract; entrypoint]
         when String.length entrypoint < 32 && entrypoint <> "default" ->
         Some (contract, Some entrypoint)
-      | _ -> None
-    in
+      | _ -> None in
     let%some contract = Contract_hash.of_string contract in
-    Some (Originated { contract; entrypoint })
-  in
+    Some (Originated { contract; entrypoint }) in
   Encoding_helpers.parse_string_variant [implicit; originated]
 
 let contract_encoding =
@@ -71,8 +68,7 @@ let encoding =
           Originated { contract; entrypoint = None }
         | Originated { contract; _ }, entrypoint ->
           Originated { contract; entrypoint = Some entrypoint })
-      (tup2 contract_encoding Variable.string)
-  in
+      (tup2 contract_encoding Variable.string) in
   Encoding_helpers.make_encoding ~name ~title ~to_string ~of_string
     ~raw_encoding
 let to_yojson, of_yojson =

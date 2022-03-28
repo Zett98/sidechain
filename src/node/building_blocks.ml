@@ -8,12 +8,10 @@ let is_valid_block state block =
     ( Printf.sprintf
         "new block has a lower block height (%Ld) than the current state (%Ld)"
         block.Block.block_height state.Node.protocol.block_height,
-      block.Block.block_height >= state.Node.protocol.block_height )
-  in
+      block.Block.block_height >= state.Node.protocol.block_height ) in
   let%assert () =
     ( "some operation in the block is not properly signed",
-      is_all_operations_properly_signed block )
-  in
+      is_all_operations_properly_signed block ) in
   Ok ()
 let is_next state block = Protocol.is_next state.Node.protocol block
 let has_next_block_to_apply state ~hash =
@@ -23,15 +21,11 @@ let is_known_block state ~hash =
   Option.is_some (Block_pool.find_block state.Node.block_pool ~hash)
 let is_known_signature state ~hash ~signature =
   let%default () = false in
-  let%some signatures =
-    Block_pool.find_signatures ~hash state.Node.block_pool
-  in
+  let%some signatures = Block_pool.find_signatures ~hash state.Node.block_pool in
   Some (Signatures.mem signature signatures)
 let is_signed_by_self state ~hash =
   let%default () = false in
-  let%some signatures =
-    Block_pool.find_signatures ~hash state.Node.block_pool
-  in
+  let%some signatures = Block_pool.find_signatures ~hash state.Node.block_pool in
   Some (Signatures.is_self_signed signatures)
 let is_current_producer state ~key_hash =
   let%default () = false in
@@ -44,13 +38,11 @@ let block_matches_current_state_root_hash state block =
 let block_matches_next_state_root_hash state block =
   let%default () = false in
   let%some { hash = next_state_root_hash; _ } =
-    Snapshots.get_next_snapshot state.Node.snapshots
-  in
+    Snapshots.get_next_snapshot state.Node.snapshots in
   Some (BLAKE2B.equal block.Block.state_root_hash next_state_root_hash)
 let block_has_signable_state_root_hash ~current_time state block =
   let time_since_last_epoch =
-    current_time -. state.Node.protocol.last_state_root_update
-  in
+    current_time -. state.Node.protocol.last_state_root_update in
   if block_matches_current_state_root_hash state block then
     time_since_last_epoch <= maximum_signable_time_between_epochs
   else
@@ -62,12 +54,10 @@ let is_signable state block =
     protocol = { last_seen_membership_change_timestamp; _ };
     _;
   } =
-    state
-  in
+    state in
   let current_time = Unix.time () in
   let next_allowed_membership_change_timestamp =
-    last_seen_membership_change_timestamp +. (24. *. 60. *. 60.)
-  in
+    last_seen_membership_change_timestamp +. (24. *. 60. *. 60.) in
   let is_trusted_operation operation =
     match operation with
     | Protocol.Operation.Core_tezos _ ->
@@ -86,11 +76,9 @@ let is_signable state block =
       | Remove_validator validator ->
         Trusted_validators_membership_change.Set.mem
           { address = validator.address; action = Remove }
-          trusted_validator_membership_change)
-  in
+          trusted_validator_membership_change) in
   let all_operations_are_trusted =
-    List.for_all is_trusted_operation block.Block.operations
-  in
+    List.for_all is_trusted_operation block.Block.operations in
   is_next state block
   && (not (is_signed_by_self state ~hash:block.hash))
   && is_current_producer state ~key_hash:block.author
@@ -117,15 +105,13 @@ let should_start_new_epoch last_state_root_update current_time =
 let produce_block state =
   let start_new_epoch =
     should_start_new_epoch state.Node.protocol.last_state_root_update
-      (Unix.time ())
-  in
+      (Unix.time ()) in
   let next_state_root_hash =
     if start_new_epoch then
       let%some snapshot = Snapshots.get_next_snapshot state.snapshots in
       Some snapshot.hash
     else
-      None
-  in
+      None in
   Block.produce ~state:state.Node.protocol ~author:state.identity.t
     ~next_state_root_hash ~operations:state.pending_operations
 let is_valid_block_height state block_height =
@@ -138,8 +124,7 @@ let append_signature state update_state ~hash ~signature =
   let block_pool =
     Block_pool.append_signature
       ~signatures_required:(signatures_required state)
-      ~hash signature state.Node.block_pool
-  in
+      ~hash signature state.Node.block_pool in
   update_state { state with block_pool }
 let add_block_to_pool state update_state block =
   let block_pool = Block_pool.append_block block state.Node.block_pool in
@@ -154,8 +139,7 @@ let clean state update_state block =
   let pending_operations =
     List.find_all
       (fun operation -> not (operation_is_in_block operation))
-      state.State.pending_operations
-  in
+      state.State.pending_operations in
   let trusted_validator_membership_change =
     List.fold_left
       (fun trusted_validator_membership_change operation ->
@@ -171,8 +155,7 @@ let clean state update_state block =
           Trusted_validators_membership_change.Set.remove
             { address = validator.address; action = Remove }
             state.Node.trusted_validator_membership_change)
-      state.Node.trusted_validator_membership_change block.operations
-  in
+      state.Node.trusted_validator_membership_change block.operations in
   Lwt.async (fun () ->
       trusted_validator_membership_change
       |> Trusted_validators_membership_change.Set.elements
@@ -197,6 +180,5 @@ let find_random_validator_uri state =
         Node.Address_map.find_opt validator.address state.validators_uri
       with
       | Some uri -> uri
-      | None -> safe_validator_uri ()
-  in
+      | None -> safe_validator_uri () in
   safe_validator_uri ()

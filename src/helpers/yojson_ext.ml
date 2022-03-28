@@ -3,8 +3,7 @@ let with_yojson_string name to_string of_string =
   let to_yojson t = `String (to_string t) in
   let of_yojson json =
     let%ok string = [%of_yojson: string] json in
-    of_string string |> Option.to_result ~none:("invalid " ^ name)
-  in
+    of_string string |> Option.to_result ~none:("invalid " ^ name) in
   (to_yojson, of_yojson)
 
 let rec of_data_encoding_json (json : Data_encoding.json) : Yojson.Safe.t =
@@ -13,8 +12,7 @@ let rec of_data_encoding_json (json : Data_encoding.json) : Yojson.Safe.t =
     let properties =
       List.map
         (fun (key, value) -> (key, of_data_encoding_json value))
-        properties
-    in
+        properties in
     `Assoc properties
   | `A elements ->
     let elements = List.map of_data_encoding_json elements in
@@ -30,8 +28,7 @@ let rec to_data_encoding_json (json : Yojson.Basic.t) : Data_encoding.Json.t =
     let properties =
       List.map
         (fun (key, value) -> (key, to_data_encoding_json value))
-        properties
-    in
+        properties in
     `O properties
   | `List elements ->
     let elements = List.map to_data_encoding_json elements in
@@ -47,8 +44,7 @@ let to_data_encoding_json json =
 let with_data_encoding encoder =
   let to_yojson t =
     let json = Data_encoding.Json.construct encoder t in
-    of_data_encoding_json json
-  in
+    of_data_encoding_json json in
   let of_yojson json =
     let json = to_data_encoding_json json in
     try Ok (Data_encoding.Json.destruct encoder json) with
@@ -57,6 +53,5 @@ let with_data_encoding encoder =
       let err =
         Format.asprintf "%a" (Data_encoding.Json.print_error ~print_unknown) exn
       in
-      Error err
-  in
+      Error err in
   (to_yojson, of_yojson)

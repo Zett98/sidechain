@@ -89,12 +89,10 @@ module Lambda : VM = struct
     let make ~code ~storage =
       let%ok code =
         Raw.Script.of_yojson code
-        |> handle_failure ~msg:"failed to parse the contract"
-      in
+        |> handle_failure ~msg:"failed to parse the contract" in
       let%ok storage =
         Raw.Value.of_yojson storage
-        |> handle_failure ~msg:"failed to parse the storage"
-      in
+        |> handle_failure ~msg:"failed to parse the storage" in
       Ok { code; storage }
   end
   module Compile = struct
@@ -136,7 +134,7 @@ end
 module Contract = struct
   type t =
     | Lambda of Lambda.Contract.t
-    | Dummy of bytes
+    | Dummy  of bytes
   [@@deriving yojson]
   let to_string = function
     | Lambda contract -> Lambda.Contract.to_string contract
@@ -150,8 +148,7 @@ module Contract = struct
       | Origination_payload.Dummy -> failwith "Test"
       | Lambda contract ->
         let compiled =
-          Lambda.Compile.compile ~gas ~originated_by ~on_error contract
-        in
+          Lambda.Compile.compile ~gas ~originated_by ~on_error contract in
         Result.map (fun (compiled, gas) -> (Lambda compiled, gas)) compiled
   end
 end

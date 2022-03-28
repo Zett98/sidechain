@@ -19,23 +19,23 @@ module Ast : sig
 
   type expr =
     (* calculus *)
-    | Var of ident
-    | Lam of ident * expr
-    | App of {
+    | Var   of ident
+    | Lam   of ident * expr
+    | App   of {
         funct : expr;
         arg : expr;
       }
     (* prims *)
     | Const of int64
-    | Prim of prim
+    | Prim  of prim
     (* branching *)
-    | If of {
+    | If    of {
         predicate : expr;
         consequent : expr;
         alternative : expr;
       }
     (* memory *)
-    | Pair of {
+    | Pair  of {
         first : expr;
         second : expr;
       }
@@ -43,7 +43,7 @@ module Ast : sig
 
   type value =
     | Int64 of int64
-    | Pair of value * value
+    | Pair  of value * value
   [@@deriving yojson, show]
 
   type script = {

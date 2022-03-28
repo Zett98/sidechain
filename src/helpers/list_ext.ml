@@ -6,8 +6,7 @@ let find_index f l =
       if f x then
         Some idx
       else
-        go (idx + 1) xs
-  in
+        go (idx + 1) xs in
   go 0 l
 let in_order_uniq (type a) compare l =
   let module S = Set.Make (struct
@@ -21,12 +20,11 @@ let in_order_uniq (type a) compare l =
       if S.mem x seen_set then
         go acc seen_set xs
       else
-        go (x :: acc) (S.add x seen_set) xs
-  in
+        go (x :: acc) (S.add x seen_set) xs in
   go [] S.empty l
 let rec fold_left_ok f state = function
   | [] -> Ok state
-  | head :: tl -> (
-    match f state head with
-    | Ok state -> fold_left_ok f state tl
-    | Error error -> Error error)
+  | head :: tl ->
+  match f state head with
+  | Ok state -> fold_left_ok f state tl
+  | Error error -> Error error

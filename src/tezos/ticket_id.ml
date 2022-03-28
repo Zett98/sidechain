@@ -17,15 +17,13 @@ let parse_micheline string =
 let to_string t =
   let loc =
     let open Micheline_printer in
-    { comment = None }
-  in
+    { comment = None } in
   let micheline =
     Micheline.Prim
       ( loc,
         "Pair",
         [String (loc, Address.to_string t.ticketer); Bytes (loc, t.data)],
-        [] )
-  in
+        [] ) in
   Format.asprintf "%a" Micheline_printer.print_expr micheline
 let of_string string =
   let%some micheline = parse_micheline string in
@@ -33,8 +31,7 @@ let of_string string =
     match micheline with
     | Prim (_, "Pair", [String (_, ticketer); Bytes (_, data)], []) ->
       Some (ticketer, data)
-    | _ -> None
-  in
+    | _ -> None in
   let%some ticketer = Address.of_string ticketer in
   Some { ticketer; data }
 let to_yojson, of_yojson =

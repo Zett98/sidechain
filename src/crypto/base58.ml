@@ -123,16 +123,13 @@ let raw_encode ?(alphabet = Alphabet.default) s =
     else
       let s, r = Z.div_rem s zbase in
       Bytes.set res i (to_char ~alphabet (Z.to_int r));
-      loop s (i - 1)
-  in
+      loop s (i - 1) in
   let i = loop s (res_len - 1) in
   let ress = Bytes.sub_string res (i + 1) (res_len - i - 1) in
   String.make zeros zero ^ ress
 
 let checksum s =
-  let hash =
-    Mirage_crypto.Hash.SHA256.(digest (digest (Cstruct.of_string s)))
-  in
+  let hash = Mirage_crypto.Hash.SHA256.(digest (digest (Cstruct.of_string s))) in
   String.sub (Cstruct.to_string hash) 0 4
 
 (* Append a 4-bytes cryptographic checksum before encoding string s *)
@@ -159,8 +156,7 @@ end
 let count_leading_char s c =
   let len = String.length s in
   let rec loop i =
-    if i = len then len else if s.[i] <> c then i else loop (i + 1)
-  in
+    if i = len then len else if s.[i] <> c then i else loop (i + 1) in
   loop 0
 
 let of_char ?(alphabet = Alphabet.default) x =

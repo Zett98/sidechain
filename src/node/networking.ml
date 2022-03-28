@@ -12,9 +12,7 @@ exception Error_status
 let request request_to_yojson path data uri =
   let open Piaf in
   let uri = Uri.with_path uri path in
-  let body =
-    request_to_yojson data |> Yojson.Safe.to_string |> Body.of_string
-  in
+  let body = request_to_yojson data |> Yojson.Safe.to_string |> Body.of_string in
   let%await response = Client.Oneshot.post ~body uri in
   match response with
   | Ok response -> (
@@ -32,8 +30,7 @@ let request (type req res)
     data uri =
   let%await body = request E.request_to_yojson E.path data uri in
   let response =
-    Yojson.Safe.from_string body |> E.response_of_yojson |> Result.get_ok
-  in
+    Yojson.Safe.from_string body |> E.response_of_yojson |> Result.get_ok in
   await response
 let broadcast_to_list endpoint uris data =
   uris
@@ -115,7 +112,7 @@ end
 module Withdraw_proof = struct
   type request = { operation_hash : BLAKE2B.t } [@@deriving yojson]
   type response =
-    | Ok of {
+    | Ok                          of {
         withdrawal_handles_hash : BLAKE2B.t;
         withdrawal_handle : Ledger.Withdrawal_handle.t;
         proof : (BLAKE2B.t * BLAKE2B.t) list;

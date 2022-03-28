@@ -1,8 +1,8 @@
 open Helpers
 type t =
-  | Ed25519 of Ed25519.Signature.t
+  | Ed25519   of Ed25519.Signature.t
   | Secp256k1 of Secp256k1.Signature.t
-  | P256 of P256.Signature.t
+  | P256      of P256.Signature.t
 [@@deriving ord, eq]
 
 let zero = Ed25519 Ed25519.Signature.zero
@@ -39,16 +39,13 @@ let to_string = function
 let of_string =
   let ed25519 string =
     let%some signature = Ed25519.Signature.of_string string in
-    Some (Ed25519 signature)
-  in
+    Some (Ed25519 signature) in
   let secp256k1 string =
     let%some signature = Secp256k1.Signature.of_string string in
-    Some (Secp256k1 signature)
-  in
+    Some (Secp256k1 signature) in
   let p256 string =
     let%some signature = P256.Signature.of_string string in
-    Some (P256 signature)
-  in
+    Some (P256 signature) in
   Encoding_helpers.parse_string_variant [ed25519; secp256k1; p256]
 let to_yojson, of_yojson =
   Yojson_ext.with_yojson_string "signature" to_string of_string

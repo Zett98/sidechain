@@ -20,12 +20,12 @@ module Run_contract = struct
   }
   [@@deriving to_yojson]
   type output =
-    | Applied of { hash : string }
-    | Failed of { hash : string }
-    | Skipped of { hash : string }
+    | Applied     of { hash : string }
+    | Failed      of { hash : string }
+    | Skipped     of { hash : string }
     | Backtracked of { hash : string }
-    | Unknown of { hash : string }
-    | Error of string
+    | Unknown     of { hash : string }
+    | Error       of string
   let output_of_yojson json =
     let module T = struct
       type t = { status : string } [@@deriving of_yojson { strict = false }]
@@ -36,8 +36,7 @@ module Run_contract = struct
     end in
     let finished make =
       let%ok { hash } = T.finished_of_yojson json in
-      Ok (make hash)
-    in
+      Ok (make hash) in
     let%ok { status } = T.of_yojson json in
     match status with
     | "applied" -> finished (fun hash -> Applied { hash })
@@ -59,14 +58,12 @@ module Run_contract = struct
         destination = Address.to_string destination;
         entrypoint;
         payload;
-      }
-    in
+      } in
     let command = "node" in
     let%await output =
       Lwt_process.pmap
         (command, [|command; file|])
-        (Yojson.Safe.to_string (input_to_yojson input))
-    in
+        (Yojson.Safe.to_string (input_to_yojson input)) in
     match Yojson.Safe.from_string output |> output_of_yojson with
     | Ok data ->
       Format.eprintf "Commit operation result: %s\n%!" output;
@@ -123,13 +120,11 @@ end = struct
         rpc_node = Uri.to_string rpc_node;
         confirmation;
         contract_address = Address.to_string contract_address;
-      }
-    in
+      } in
     let%await output =
       Lwt_process.pmap
         (command, [|command; file|])
-        (Yojson.Safe.to_string (input_to_yojson input))
-    in
+        (Yojson.Safe.to_string (input_to_yojson input)) in
     match Yojson.Safe.from_string output |> output_of_yojson with
     | Ok storage -> await (Ok storage)
     | Error error -> await (Error error)
@@ -157,8 +152,7 @@ module Listen_transactions = struct
     let run ~context ~destination ~on_message ~on_fail =
       let send f pr data =
         let oc = pr#stdin in
-        Lwt.finalize (fun () -> f oc data) (fun () -> Lwt_io.close oc)
-      in
+        Lwt.finalize (fun () -> f oc data) (fun () -> Lwt_io.close oc) in
       let process = Lwt_process.open_process (node, [|node; file|]) in
       let input =
         {
@@ -167,12 +161,10 @@ module Listen_transactions = struct
           destination = Address.to_string destination;
         }
         |> input_to_yojson
-        |> Yojson.Safe.to_string
-      in
+        |> Yojson.Safe.to_string in
       let on_fail _exn =
         let%await _status = process#close in
-        on_fail ()
-      in
+        on_fail () in
       let%await () = send Lwt_io.write process input in
       let rec read_line_until_fails () =
         Lwt.catch
@@ -184,8 +176,7 @@ module Listen_transactions = struct
             |> Result.get_ok
             |> on_message;
             read_line_until_fails ())
-          on_fail
-      in
+          on_fail in
       read_line_until_fails ()
   end
   let listen ~context ~destination ~on_message =
@@ -224,8 +215,7 @@ module Consensus = struct
             (Some key, Some signature)
           | None -> (None, None))
         signatures
-      |> List.split
-    in
+      |> List.split in
     let validators = List.map Key_hash.to_string validators in
     let payload =
       {
@@ -236,16 +226,14 @@ module Consensus = struct
         state_hash;
         validators;
         current_validator_keys;
-      }
-    in
+      } in
     let%await _ =
       Run_contract.run ~context ~destination:context.Context.consensus_contract
         ~entrypoint:"update_root_hash"
-        ~payload:(Payload.to_yojson payload)
-    in
+        ~payload:(Payload.to_yojson payload) in
     await ()
   type transaction =
-    | Deposit of {
+    | Deposit          of {
         ticket : Ticket_id.t;
         amount : Z.t;
         destination : Address.t;
@@ -290,8 +278,7 @@ module Consensus = struct
             ],
             _ ) ) ->
       let%some state_root_hash =
-        state_root_hash |> Bytes.to_string |> BLAKE2B.of_raw_string
-      in
+        state_root_hash |> Bytes.to_string |> BLAKE2B.of_raw_string in
       Some (Update_root_hash state_root_hash)
     | ( "deposit",
         Micheline.Prim
@@ -310,15 +297,12 @@ module Consensus = struct
             ],
             _ ) ) ->
       let%some destination =
-        Data_encoding.Binary.of_bytes_opt Address.encoding destination
-      in
+        Data_encoding.Binary.of_bytes_opt Address.encoding destination in
       let%some ticketer =
-        Data_encoding.Binary.of_bytes_opt Address.encoding ticketer
-      in
+        Data_encoding.Binary.of_bytes_opt Address.encoding ticketer in
       let ticket =
         let open Ticket_id in
-        { ticketer; data }
-      in
+        { ticketer; data } in
       Some (Deposit { ticket; destination; amount })
     | _ -> None
   let parse_operation output =
@@ -329,14 +313,12 @@ module Consensus = struct
     let on_message output =
       match parse_operation output with
       | Some operation -> on_operation operation
-      | None -> ()
-    in
+      | None -> () in
     Listen_transactions.listen ~context ~destination:context.consensus_contract
       ~on_message
   let fetch_validators ~context =
     let Context.{ rpc_node; required_confirmations; consensus_contract; _ } =
-      context
-    in
+      context in
     let micheline_to_validators = function
       | Ok
           (Micheline.Prim
@@ -352,12 +334,10 @@ module Consensus = struct
             | _ -> Error "Some key_hash wasn't of type string")
           [] (List.rev key_hashes)
       | Ok _ -> Error "Failed to parse storage micheline expression"
-      | Error msg -> Error msg
-    in
+      | Error msg -> Error msg in
     let%await micheline_storage =
       Fetch_storage.run ~confirmation:required_confirmations ~rpc_node
-        ~contract_address:consensus_contract
-    in
+        ~contract_address:consensus_contract in
     Lwt.return (micheline_to_validators micheline_storage)
 end
 module Discovery = struct

@@ -14,14 +14,12 @@ let length t = t.length
 let after_current n t =
   let%some current_producer = t.current in
   let%some current_index =
-    List.find_index (( = ) current_producer) t.validators
-  in
+    List.find_index (( = ) current_producer) t.validators in
   let relative_index = (current_index + n) mod t.length in
   let index =
     match relative_index < 0 with
     | true -> t.length + relative_index
-    | false -> relative_index
-  in
+    | false -> relative_index in
   List.nth_opt t.validators index
 let update_current address t =
   let validator =
@@ -36,13 +34,11 @@ let empty =
   { current = None; validators = []; length = 0; hash = hash_validators [] }
 let add validator t =
   let validators =
-    t.validators @ [validator] |> List.in_order_uniq compare_validator
-  in
+    t.validators @ [validator] |> List.in_order_uniq compare_validator in
   let new_proposer =
     match t.current = None with
     | true -> Some validator
-    | false -> t.current
-  in
+    | false -> t.current in
   let hash = hash_validators validators in
   { current = new_proposer; validators; length = List.length validators; hash }
 let remove validator t =
@@ -52,8 +48,7 @@ let remove validator t =
     match (validators, t.current, validator) with
     | [], _, _ -> None
     | _, Some current, removed when current = removed -> after_current 1 t
-    | _ -> t.current
-  in
+    | _ -> t.current in
   let hash = hash_validators validators in
   { current; validators; length; hash }
 let hash t = t.hash

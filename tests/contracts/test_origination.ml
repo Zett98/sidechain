@@ -12,15 +12,12 @@ let make_ticket ?ticketer ?data () =
         Random.generate 20
         |> Cstruct.to_string
         |> BLAKE2B_20.of_raw_string
-        |> Option.get
-      in
-      Address.Originated { contract = random_hash; entrypoint = None }
-  in
+        |> Option.get in
+      Address.Originated { contract = random_hash; entrypoint = None } in
   let data =
     match data with
     | Some data -> data
-    | None -> Random.generate 256 |> Cstruct.to_bytes
-  in
+    | None -> Random.generate 256 |> Cstruct.to_bytes in
   let open Ticket_id in
   { ticketer; data }
 
@@ -44,8 +41,7 @@ let setup ?(initial_amount = 10000) () =
         destination = tezos_address;
         ticket = t2;
         amount = Amount.of_int initial_amount;
-      }
-  in
+      } in
   let s = State.empty in
   let opp =
     {
@@ -54,8 +50,7 @@ let setup ?(initial_amount = 10000) () =
         |> Tezos.Operation_hash.of_string
         |> Option.get;
       internal_operations = [op];
-    }
-  in
+    } in
   let opp = Tezos_operation.make opp in
   let make_address =
     tezos_address |> Tezos.Address.to_string |> Address.of_string |> Option.get
@@ -74,26 +69,21 @@ let test_failure msg ~initial_amount ~expected =
     Lambda_vm.Ast.script_to_yojson script
     |> Yojson.Safe.to_string
     |> Raw.Script.make
-    |> Result.get_ok
-  in
+    |> Result.get_ok in
   let storage =
     Lambda_vm.Ast.value_to_yojson value
     |> Yojson.Safe.to_string
     |> Raw.Value.make
-    |> Result.get_ok
-  in
+    |> Result.get_ok in
   let payload =
-    Origination_payload.make_lambda ~code ~storage |> Result.get_ok
-  in
+    Origination_payload.make_lambda ~code ~storage |> Result.get_ok in
   let operation =
-    User_operation.Contract_origination { to_originate = payload; ticket }
-  in
+    User_operation.Contract_origination
+      { to_originate = payload; ticket; amount = Amount.of_int 10 } in
   let user_op = User_operation.make ~sender:address operation in
   let state, _ = State.apply_user_operation initial_state user_op in
   let ledger = State.ledger state in
-  let balance =
-    Ledger.balance (Address.to_key_hash address |> Option.get) ticket ledger
-  in
+  let balance = Ledger.balance address ticket ledger in
   [
     Alcotest.test_case msg `Quick (fun () ->
         Alcotest.(check' amount) ~msg ~expected ~actual:balance);
@@ -112,29 +102,23 @@ let test_ok msg ~expected =
     Lambda_vm.Ast.script_to_yojson script
     |> Yojson.Safe.to_string
     |> Raw.Script.make
-    |> Result.get_ok
-  in
+    |> Result.get_ok in
   let storage =
     Lambda_vm.Ast.value_to_yojson value
     |> Yojson.Safe.to_string
     |> Raw.Value.make
-    |> Result.get_ok
-  in
+    |> Result.get_ok in
   let payload =
-    Origination_payload.make_lambda ~code ~storage |> Result.get_ok
-  in
+    Origination_payload.make_lambda ~code ~storage |> Result.get_ok in
   let operation =
-    User_operation.Contract_origination { to_originate = payload; ticket }
-  in
+    User_operation.Contract_origination
+      { to_originate = payload; ticket; amount = Amount.of_int 10 } in
   let user_op = User_operation.make ~sender:address operation in
   let contract_address =
-    user_op.hash |> BLAKE2B.to_raw_string |> BLAKE2B_20.hash
-  in
+    user_op.hash |> BLAKE2B.to_raw_string |> BLAKE2B_20.hash in
   let state, _ = State.apply_user_operation initial_state user_op in
   let ledger = State.ledger state in
-  let balance =
-    Ledger.balance (Address.to_key_hash address |> Option.get) ticket ledger
-  in
+  let balance = Ledger.balance address ticket ledger in
   [
     Alcotest.test_case msg `Quick (fun () ->
         Alcotest.(check' amount) ~msg ~expected ~actual:balance);
@@ -160,12 +144,10 @@ let payload_failures ~msg =
   let originate code storage =
     let%ok code = Raw.Script.make code in
     let%ok storage = Raw.Value.make storage in
-    Origination_payload.make_lambda ~code ~storage
-  in
+    Origination_payload.make_lambda ~code ~storage in
   let check res () =
     let _ = res |> Result.map_error (fun x -> raise (Failure x)) in
-    ()
-  in
+    () in
   [
     Alcotest.test_case msg `Quick (fun () ->
         Alcotest.(check_raises)
@@ -195,10 +177,12 @@ let payload_failures ~msg =
 let test_origination =
   ( "Origination gas costs",
     [
-      test_failure "Origination should fail and consume gas" ~initial_amount:150
+      test_failure "Origination should fail and consume gas" ~initial_amount:850
+        ~expected:(Amount.of_int 0);
+      test_failure "Origination should fail and consume gas" ~initial_amount:100
         ~expected:(Amount.of_int 0);
       test_ok "Origination should succeed and consume gas"
-        ~expected:(Amount.of_int 9150);
+        ~expected:(Amount.of_int 9140);
       payload_failures ~msg:"Invalid payloads should fail origination";
     ]
     |> List.flatten )

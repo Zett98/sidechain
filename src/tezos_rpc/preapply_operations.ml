@@ -30,13 +30,10 @@ let execute ~node_uri ~secret ~chain ~protocol ~branch ~operations =
     let chain =
       match chain with
       | Some chain -> Chain_id.to_string chain
-      | None -> "main"
-    in
+      | None -> "main" in
     let branch = Block_hash.to_string branch in
-    path ~chain ~branch
-  in
+    path ~chain ~branch in
 
   let data =
-    Operation.make_preapply_json ~secret ~protocol ~branch ~operations
-  in
+    Operation.make_preapply_json ~secret ~protocol ~branch ~operations in
   http_post_data_encoding ~node_uri ~path ~of_yojson:response_of_yojson ~data

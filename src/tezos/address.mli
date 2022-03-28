@@ -1,6 +1,6 @@
 open Crypto
 type t =
-  | Implicit of Key_hash.t
+  | Implicit   of Key_hash.t
   | Originated of {
       contract : Contract_hash.t;
       entrypoint : string option;

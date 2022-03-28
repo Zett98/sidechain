@@ -5,8 +5,7 @@ let make_encoding ~name ~title ~to_string ~of_string ~raw_encoding =
   let of_string_exn string =
     match of_string string with
     | Some t -> t
-    | None -> unexpected_data ~name
-  in
+    | None -> unexpected_data ~name in
   let json_encoding = conv to_string (Json.wrap_error of_string_exn) string in
   splitted
     ~binary:(obj1 (req name raw_encoding))

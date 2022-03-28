@@ -32,20 +32,16 @@ let make ~identity ~trusted_validator_membership_change
   let initial_block = Block.genesis in
   let initial_protocol = Protocol.make ~initial_block in
   let initial_signatures =
-    Signatures.make ~self_key:identity.key |> Signatures.set_signed
-  in
+    Signatures.make ~self_key:identity.key |> Signatures.set_signed in
   let initial_block_pool =
     Block_pool.make ~self_key:identity.key
-    |> Block_pool.append_block initial_block
-  in
+    |> Block_pool.append_block initial_block in
   let hash, data = Protocol.hash initial_protocol in
   let initial_snapshot =
     let open Snapshots in
-    { hash; data }
-  in
+    { hash; data } in
   let initial_snapshots =
-    Snapshots.make ~initial_snapshot ~initial_block ~initial_signatures
-  in
+    Snapshots.make ~initial_snapshot ~initial_block ~initial_signatures in
   {
     identity;
     trusted_validator_membership_change;
@@ -75,13 +71,11 @@ let apply_block state block =
            ~new_snapshot:
              (let open Snapshots in
              { hash; data })
-           ~block_height:prev_protocol.block_height
-  in
+           ~block_height:prev_protocol.block_height in
   let recent_operation_receipts =
     List.fold_left
       (fun results (hash, receipt) -> BLAKE2B.Map.add hash receipt results)
-      state.recent_operation_receipts receipts
-  in
+      state.recent_operation_receipts receipts in
   Ok { state with protocol; recent_operation_receipts; snapshots }
 let signatures_required state =
   let number_of_validators = Validators.length state.protocol.validators in
@@ -93,35 +87,29 @@ let load_snapshot ~snapshot ~additional_blocks ~last_block
     last_block :: additional_blocks
     |> List.sort (fun a b ->
            let open Int64 in
-           to_int (sub a.Block.block_height b.Block.block_height))
-  in
+           to_int (sub a.Block.block_height b.Block.block_height)) in
   let block_pool =
     let block_pool =
       List.fold_left
         (fun block_pool block -> Block_pool.append_block block block_pool)
-        t.block_pool all_blocks
-    in
+        t.block_pool all_blocks in
     let signatures_required = signatures_required t in
     List.fold_left
       (fun block_pool signature ->
         Block_pool.append_signature ~signatures_required
           ~hash:last_block.Block.hash signature block_pool)
-      block_pool last_block_signatures
-  in
+      block_pool last_block_signatures in
   let%assert () =
     ( `Not_all_blocks_are_signed,
       List.for_all
         (fun block -> Block_pool.is_signed ~hash:block.Block.hash block_pool)
-        all_blocks )
-  in
+        all_blocks ) in
   let%assert () =
     ( `State_root_not_the_expected,
-      snapshot.Snapshots.hash = last_block.state_root_hash )
-  in
+      snapshot.Snapshots.hash = last_block.state_root_hash ) in
   let%assert () =
     ( `Snapshots_with_invalid_hash,
-      BLAKE2B.verify ~hash:snapshot.hash snapshot.data )
-  in
+      BLAKE2B.verify ~hash:snapshot.hash snapshot.data ) in
   let of_yojson =
     [%of_yojson:
       Core.State.t
@@ -131,8 +119,7 @@ let load_snapshot ~snapshot ~additional_blocks ~last_block
       * BLAKE2B.t
       * int64
       * BLAKE2B.t
-      * BLAKE2B.t]
-  in
+      * BLAKE2B.t] in
   let ( core_state,
         included_tezos_operations,
         included_user_operations,
@@ -141,8 +128,7 @@ let load_snapshot ~snapshot ~additional_blocks ~last_block
         block_height,
         last_block_hash,
         state_root_hash ) =
-    snapshot.data |> Yojson.Safe.from_string |> of_yojson |> Result.get_ok
-  in
+    snapshot.data |> Yojson.Safe.from_string |> of_yojson |> Result.get_ok in
   let protocol =
     let open Protocol in
     {
@@ -157,8 +143,7 @@ let load_snapshot ~snapshot ~additional_blocks ~last_block
       last_state_root_update = 0.0;
       last_applied_block_timestamp = 0.0;
       last_seen_membership_change_timestamp = 0.0;
-    }
-  in
+    } in
   let%assert () =
     (`Invalid_snapshot_height, protocol.block_height > t.protocol.block_height)
   in

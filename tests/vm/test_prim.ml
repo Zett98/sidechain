@@ -17,13 +17,11 @@ let make_op2_test ~name prim f =
           let result =
             Vm_test.execute_ast_exn 2901
               (Pair (Int64 a, Int64 b))
-              (script_op2 prim)
-          in
+              (script_op2 prim) in
           let expected_result =
             Vm_test.compile_value_exn
               (Gas.make ~initial_gas:200)
-              (Int64 (f a b))
-          in
+              (Int64 (f a b)) in
           result.storage = expected_result))
 
 let test_sum = make_op2_test ~name:"Adding pairs" Add Int64.add
@@ -58,14 +56,11 @@ let test_neg =
   QCheck_alcotest.to_alcotest
     QCheck.(
       Test.make ~name:"Negative numbers" ~count:10_000 int64 (fun x ->
-          let result =
-            Vm_test.execute_ast_exn 1501 (Int64 x) (script_op1 Neg)
-          in
+          let result = Vm_test.execute_ast_exn 1501 (Int64 x) (script_op1 Neg) in
           let expected_result =
             Vm_test.compile_value_exn
               (Gas.make ~initial_gas:200)
-              (Int64 Int64.(neg x))
-          in
+              (Int64 Int64.(neg x)) in
           result.storage = expected_result))
 
 let test =

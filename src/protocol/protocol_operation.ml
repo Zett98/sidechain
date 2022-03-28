@@ -3,7 +3,7 @@ open Crypto
 open Core
 module Consensus = struct
   type t =
-    | Add_validator of Validators.validator
+    | Add_validator    of Validators.validator
     | Remove_validator of Validators.validator
   [@@deriving eq, ord, yojson]
   let hash payload = to_yojson payload |> Yojson.Safe.to_string |> BLAKE2B.hash
@@ -33,8 +33,7 @@ module Core_user = struct
       let to_yojson = [%to_yojson: int32 * int64 * User_operation.t] in
       let json = to_yojson (nonce, block_height, data) in
       let payload = Yojson.Safe.to_string json in
-      f payload
-    in
+      f payload in
     let hash = apply BLAKE2B.hash in
     let verify ~hash = apply (BLAKE2B.verify ~hash) in
     (hash, verify)
@@ -54,29 +53,23 @@ module Core_user = struct
     let%ok sender =
       match Address.to_key_hash data.User_operation.sender with
       | Some sender -> Ok sender
-      | _ -> Error "Sender should be a key_hash"
-    in
+      | _ -> Error "Sender should be a key_hash" in
     let%assert () =
       ( "Invalid core_user operation hash",
-        verify ~hash ~nonce ~block_height ~data )
-    in
+        verify ~hash ~nonce ~block_height ~data ) in
+    let%assert () = ("Invalid core_user key", Key_hash.matches_key key sender) in
     let%assert () =
-      ("Invalid core_user key", Key_hash.matches_key key sender)
-    in
-    let%assert () =
-      ("Invalid core_user signature", Signature.verify key signature hash)
-    in
+      ("Invalid core_user signature", Signature.verify key signature hash) in
     Ok { hash; key; signature; nonce; block_height; data }
   let of_yojson json =
     let%ok { hash; key; signature; nonce; block_height; data } =
-      of_yojson json
-    in
+      of_yojson json in
     verify ~hash ~key ~signature ~nonce ~block_height ~data
   let unsafe_make ~hash ~key ~signature ~nonce ~block_height ~data =
     { hash; key; signature; nonce; block_height; data }
 end
 type t =
   | Core_tezos of Core.Tezos_operation.t
-  | Core_user of Core_user.t
-  | Consensus of Consensus.t
+  | Core_user  of Core_user.t
+  | Consensus  of Consensus.t
 [@@deriving eq, ord, yojson]
