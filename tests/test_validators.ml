@@ -8,12 +8,14 @@ let () =
         let _key, wallet = Ed25519.generate () in
         let address = Key_hash.of_key (Ed25519 wallet) in
         let open Validators in
-        { address } in
+        { address }
+      in
       let setup_two () =
         let a = make_validator () in
         let b = make_validator () in
         let t = empty |> add a |> add b in
-        (t, a, b) in
+        (t, a, b)
+      in
       test "empty" (fun { expect; _ } ->
           let t = empty in
           expect.equal (current t) None;

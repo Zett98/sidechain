@@ -21,7 +21,8 @@ let make ~self_key =
 let add ~signatures_required signature t =
   if not (Signature_set.mem signature t.signatures) then
     let self_signed =
-      t.self_signed || Signature.public_key signature = t.self_key in
+      t.self_signed || Signature.public_key signature = t.self_key
+    in
     let signatures = Signature_set.add signature t.signatures in
     let length = t.length + 1 in
     let signed = length >= signatures_required in

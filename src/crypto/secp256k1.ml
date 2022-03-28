@@ -3,7 +3,8 @@ open Libsecp256k1
 let context =
   let c = Context.create () in
   let rand_value =
-    Random.generate 32 |> Cstruct.to_bytes |> Bigstring.of_bytes in
+    Random.generate 32 |> Cstruct.to_bytes |> Bigstring.of_bytes
+  in
   let randomized = Context.randomize c rand_value in
   if randomized then
     c

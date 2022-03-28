@@ -26,8 +26,15 @@ let apply_tezos_operation t tezos_operation =
         | Implicit key_hash ->
           let destination = key_hash in
           Ledger.deposit destination amount ticket ledger
+<<<<<<< HEAD
         | Originated _ -> failwith "not implemented" in
       { t with ledger } in
+=======
+        | Originated _ -> failwith "not implemented"
+      in
+      { t with ledger }
+  in
+>>>>>>> 49b83643... add origination
   let { hash = _; payload } = tezos_operation in
   let { tezos_operation_hash = _; internal_operations } = payload in
   List.fold_left apply_internal_operation t internal_operations
@@ -38,12 +45,22 @@ let apply_user_operation t user_operation =
   match (Address.to_key_hash sender, initial_operation) with
   | Some sender, Transaction { destination; amount; ticket } ->
     let%ok ledger =
+<<<<<<< HEAD
       Ledger.transfer ~sender ~destination amount ticket t.ledger in
+=======
+      Ledger.transfer ~sender ~destination amount ticket t.ledger
+    in
+>>>>>>> 49b83643... add origination
     Ok ({ t with ledger }, None)
   | None, Transaction _ -> Error `Transaction_sender_must_be_implicit_account
   | Some sender, Tezos_withdraw { owner; amount; ticket } ->
     let%ok ledger, handle =
+<<<<<<< HEAD
       Ledger.withdraw ~sender ~destination:owner amount ticket t.ledger in
+=======
+      Ledger.withdraw ~sender ~destination:owner amount ticket t.ledger
+    in
+>>>>>>> 49b83643... add origination
     Ok ({ t with ledger }, Some (Receipt_tezos_withdraw handle))
   | None, Tezos_withdraw _ -> Error `Withdraw_sender_must_be_implicit_account
   | Some sender, Contract_origination { to_originate; ticket } ->
@@ -58,12 +75,22 @@ let apply_user_operation t user_operation =
               ledger = Ledger.burn t.ledger ~sender ~ticket ~amount:balance;
             },
           let comparison_result = compare balance origination_cost in
+<<<<<<< HEAD
           comparison_result >= 0 ) in
+=======
+          comparison_result >= 0 )
+    in
+>>>>>>> 49b83643... add origination
     let t =
       {
         t with
         ledger = Ledger.burn t.ledger ~sender ~ticket ~amount:origination_cost;
+<<<<<<< HEAD
       } in
+=======
+      }
+    in
+>>>>>>> 49b83643... add origination
     let initial_gas = Amount.to_int Amount.(balance - origination_cost) in
     let burn_and_update t _ to_burn =
       `Origination_error
@@ -72,6 +99,7 @@ let apply_user_operation t user_operation =
           ledger =
             Ledger.burn ~sender ~ticket ~amount:(to_burn |> Amount.of_int)
               t.ledger;
+<<<<<<< HEAD
         } in
     let%ok contract, to_burn =
       Smart_contracts.Contract.Compile.compile_script ~originated_by:sender
@@ -80,6 +108,19 @@ let apply_user_operation t user_operation =
     let contract_storage =
       Smart_contracts.Contract_storage.originate_contract t.contract_storage
         ~address ~contract in
+=======
+        }
+    in
+    let%ok contract, to_burn =
+      Smart_contracts.Contract.Compile.compile_script ~originated_by:sender
+        ~gas:initial_gas ~on_error:(burn_and_update t) to_originate
+    in
+    let address = hash |> BLAKE2B.to_raw_string |> BLAKE2B_20.hash in
+    let contract_storage =
+      Smart_contracts.Contract_storage.originate_contract t.contract_storage
+        ~address ~contract
+    in
+>>>>>>> 49b83643... add origination
     Ok
       ( {
           contract_storage;

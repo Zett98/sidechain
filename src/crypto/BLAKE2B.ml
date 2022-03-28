@@ -26,7 +26,8 @@ end = struct
     let%some () =
       match String.length string = size * 2 with
       | true -> Some ()
-      | false -> None in
+      | false -> None
+    in
     of_hex_opt string
   let to_yojson str = `String (to_hex str)
   let of_yojson json =

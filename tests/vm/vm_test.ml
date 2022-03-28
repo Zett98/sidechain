@@ -2,7 +2,7 @@ open Lambda_vm
 
 type error =
   | Compilation_error of Compiler.error
-  | Execution_error   of Interpreter.error
+  | Execution_error of Interpreter.error
 
 let failwith s = Format.kasprintf failwith s
 

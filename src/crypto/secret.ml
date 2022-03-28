@@ -1,8 +1,8 @@
 open Helpers
 type t =
-  | Ed25519   of Ed25519.Secret.t
+  | Ed25519 of Ed25519.Secret.t
   | Secp256k1 of Secp256k1.Secret.t
-  | P256      of P256.Secret.t
+  | P256 of P256.Secret.t
 [@@deriving ord, eq]
 let to_string = function
   | Ed25519 secret -> Ed25519.Secret.to_string secret
@@ -11,13 +11,16 @@ let to_string = function
 let of_string =
   let ed25519 string =
     let%some secret = Ed25519.Secret.of_string string in
-    Some (Ed25519 secret) in
+    Some (Ed25519 secret)
+  in
   let secp256k1 string =
     let%some secret = Secp256k1.Secret.of_string string in
-    Some (Secp256k1 secret) in
+    Some (Secp256k1 secret)
+  in
   let p256 string =
     let%some secret = P256.Secret.of_string string in
-    Some (P256 secret) in
+    Some (P256 secret)
+  in
   Encoding_helpers.parse_string_variant [ed25519; secp256k1; p256]
 let encoding =
   let open Data_encoding in
@@ -42,7 +45,8 @@ let encoding =
                | P256 secret -> Some secret
                | _ -> None)
              (fun secret -> P256 secret);
-         ] in
+         ]
+  in
   Encoding_helpers.make_encoding ~name ~title ~to_string ~of_string
     ~raw_encoding
 let to_yojson, of_yojson =

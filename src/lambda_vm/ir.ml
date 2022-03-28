@@ -27,36 +27,36 @@ end
 
 type expr =
   (* calculus *)
-  | E_var   of ident
-  | E_lam   of ident * expr
-  | E_app   of {
+  | E_var of ident
+  | E_lam of ident * expr
+  | E_app of {
       funct : expr;
       arg : expr;
     }
   (* prims *)
   | E_const of int64
-  | E_prim  of prim
+  | E_prim of prim
   (* branching *)
-  | E_if    of {
+  | E_if of {
       (* predicate <> 0 ? consequent : alternative *)
       predicate : expr;
       consequent : expr;
       alternative : expr;
     }
   (* memory *)
-  | E_pair  of {
+  | E_pair of {
       first : expr;
       second : expr;
     }
 [@@deriving show, yojson]
 
 type value =
-  | V_int64     of int64
-  | V_pair      of {
+  | V_int64 of int64
+  | V_pair of {
       first : value;
       second : value;
     }
-  | V_closure   of {
+  | V_closure of {
       env : value Env.t;
       param : Ident.t;
       body : expr;

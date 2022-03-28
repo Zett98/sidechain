@@ -21,7 +21,8 @@ let handle_request (type req res)
       | Ok response ->
         response |> E.response_to_yojson |> Yojson.Safe.to_string |> Dream.json
       | Error err -> raise (Failure (Flows.string_of_error err)))
-    | Error err -> raise (Failure err) in
+    | Error err -> raise (Failure err)
+  in
   Dream.post E.path handler
 
 let handle_received_block_and_signature =
@@ -31,11 +32,13 @@ let handle_received_block_and_signature =
       let open Flows in
       let%ok () =
         received_block (Server.get_state ()) update_state request.block
-        |> ignore_some_errors in
+        |> ignore_some_errors
+      in
       let%ok () =
         received_signature (Server.get_state ()) update_state
           ~hash:request.block.hash ~signature:request.signature
-        |> ignore_some_errors in
+        |> ignore_some_errors
+      in
       Ok ())
 let handle_received_signature =
   handle_request
@@ -45,7 +48,8 @@ let handle_received_signature =
       let%ok () =
         received_signature (Server.get_state ()) update_state ~hash:request.hash
           ~signature:request.signature
-        |> ignore_some_errors in
+        |> ignore_some_errors
+      in
       Ok ())
 let handle_block_by_hash =
   handle_request
@@ -148,7 +152,8 @@ let node =
     let docv = "folder_node" in
     let doc = "Path to the folder containing the node configuration data." in
     let open Arg in
-    required & pos 0 (some string) None & info [] ~doc ~docv in
+    required & pos 0 (some string) None & info [] ~doc ~docv
+  in
   let open Term in
   const node $ folder_node
 let () = Term.exit @@ Term.eval (node, Term.info "deku-node")

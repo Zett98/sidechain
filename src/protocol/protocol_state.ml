@@ -25,7 +25,8 @@ let hash t =
       * BLAKE2B.t
       * int64
       * BLAKE2B.t
-      * BLAKE2B.t] in
+      * BLAKE2B.t]
+  in
   let json =
     to_yojson
       ( t.core_state,
@@ -35,6 +36,7 @@ let hash t =
         t.validators_hash,
         t.block_height,
         t.last_block_hash,
-        t.state_root_hash ) in
+        t.state_root_hash )
+  in
   let data = Yojson.Safe.to_string json in
   (BLAKE2B.hash data, data)

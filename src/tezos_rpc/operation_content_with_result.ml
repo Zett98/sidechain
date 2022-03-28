@@ -7,7 +7,7 @@ type parameters = {
   value : Michelson.t;
 }
 type internal_operation =
-  | Internal_transaction     of {
+  | Internal_transaction of {
       sender : Address.t;
       destination : Address.t;
       parameters : parameters option;
@@ -17,7 +17,7 @@ type status =
   | Applied
   | Other
 type t =
-  | Transaction     of {
+  | Transaction of {
       source : Key_hash.t;
       status : status;
       internal_operations : internal_operation list;
@@ -54,7 +54,8 @@ module Decoder = struct
     let%ok { entrypoint; value } = parameters_base_of_yojson json in
     (* TODO: this is completely cursed and we shuold switch to Data_encoding *)
     let%ok value =
-      Yojson.Safe.to_string value |> Data_encoding.Json.from_string in
+      Yojson.Safe.to_string value |> Data_encoding.Json.from_string
+    in
     (* TODO: this fails with exception *)
     let value = Data_encoding.Json.destruct Michelson.expr_encoding value in
     Ok ({ entrypoint; value } : parameters)
@@ -75,7 +76,8 @@ module Decoder = struct
 
   let transaction_internal_operation_of_yojson json =
     let%ok { source; destination; parameters; result } =
-      transaction_internal_operation_of_yojson json in
+      transaction_internal_operation_of_yojson json
+    in
     (*TODO: what to do with this status? *)
     let _ = result.status in
     Ok (Internal_transaction { sender = source; destination; parameters })
@@ -107,13 +109,15 @@ module Decoder = struct
 
   let transaction_operation_of_yojson json =
     let%ok { source; destination; parameters; metadata } =
-      transaction_operation_of_yojson json in
+      transaction_operation_of_yojson json
+    in
     (* TODO: does applied here represents also the status of all the internal_transactions? *)
     let initial_transaction =
       Internal_transaction { sender = Implicit source; destination; parameters }
     in
     let internal_operations =
-      initial_transaction :: metadata.internal_operation_results in
+      initial_transaction :: metadata.internal_operation_results
+    in
 
     Ok
       (Transaction

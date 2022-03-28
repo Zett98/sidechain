@@ -6,7 +6,7 @@ type parameters = {
   value : Michelson.t;
 }
 type internal_operation =
-  | Internal_transaction     of {
+  | Internal_transaction of {
       sender : Address.t;
       destination : Address.t;
       parameters : parameters option;
@@ -16,7 +16,7 @@ type status =
   | Applied
   | Other
 type t =
-  | Transaction     of {
+  | Transaction of {
       source : Key_hash.t;
       status : status;
       internal_operations : internal_operation list;

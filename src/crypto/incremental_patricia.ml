@@ -8,11 +8,11 @@ struct
   type key = int [@@deriving yojson]
   type tree =
     | Empty
-    | Leaf  of {
+    | Leaf of {
         value : value;
         hash : BLAKE2B.t;
       }
-    | Node  of {
+    | Node of {
         left : tree;
         hash : BLAKE2B.t;
         right : tree;
@@ -39,7 +39,8 @@ struct
       let t =
         match is_set bit key with
         | true -> right
-        | false -> left in
+        | false -> left
+      in
       find (bit - 1) ((hash_of_t left, hash_of_t right) :: proofs) key t
   let find key t =
     if key >= 0 && key <= t.last_key then
@@ -63,7 +64,8 @@ struct
         match is_set bit key with
         | true -> node left (add (bit - 1) key value right)
         | false -> node (add (bit - 1) key value left) right)
-      | _ -> assert false in
+      | _ -> assert false
+    in
     let key = t.last_key + 1 in
     let value = f key in
     let increase_top_bit = key lsr t.top_bit in
@@ -73,7 +75,8 @@ struct
         let right = empty (top_bit - 1) in
         node t.tree right
       else
-        t.tree in
+        t.tree
+    in
     let tree = add (top_bit - 1) key value tree in
     ({ tree; top_bit; last_key = key }, value)
   let empty = { top_bit = 0; tree = Empty; last_key = -1 }

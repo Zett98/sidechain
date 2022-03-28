@@ -69,7 +69,8 @@ module Signature = struct
 end
 let sign secret hash =
   let r, s =
-    Cstruct.of_string (BLAKE2B.to_raw_string hash) |> sign ~key:secret in
+    Cstruct.of_string (BLAKE2B.to_raw_string hash) |> sign ~key:secret
+  in
   [r; s] |> Cstruct.concat |> Cstruct.to_string
 let verify public signature hash =
   let r, s = (String.sub signature 0 32, String.sub signature 32 32) in

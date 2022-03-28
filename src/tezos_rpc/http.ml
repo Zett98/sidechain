@@ -11,7 +11,8 @@ let http_request (type a) ~uri ~(method_ : a method_) (data : a) =
     | GET -> Client.Oneshot.get uri
     | POST ->
       let body = Body.of_string data in
-      Client.Oneshot.post ~body uri in
+      Client.Oneshot.post ~body uri
+  in
   match response with
   | Ok response -> (
     let%await body = Piaf.Body.to_string response.body in
@@ -71,7 +72,8 @@ let make_lazy_lexbuf read =
     read_buf := !read_buf ^ s;
     match !waiting with
     | Some cont -> Deep.continue cont ()
-    | None -> () in
+    | None -> ()
+  in
 
   let lexbuf =
     Lexing.from_function (fun buf size ->
@@ -85,13 +87,15 @@ let make_lazy_lexbuf read =
 
         (* TODO: this is clearly not optimal *)
         read_buf := String.sub s size (s_length - size);
-        size) in
+        size)
+  in
   let handler (type a) (eff : a Effect.t) :
       ((a, unit) Deep.continuation -> unit) option =
     match eff with
     | Poll_data ->
       Some (fun (cont : (unit, unit) Deep.continuation) -> waiting := Some cont)
-    | _ -> None in
+    | _ -> None
+  in
 
   let () = Deep.try_with read lexbuf { effc = handler } in
   feed
@@ -108,7 +112,8 @@ let lazy_json_from_stream string_stream =
     let open Yojson.Safe in
     let json = read_json lexer_state lexbuf in
     pending := json :: !pending;
-    read lexbuf in
+    read lexbuf
+  in
 
   let feed = make_lazy_lexbuf read in
 
@@ -145,6 +150,7 @@ let http_get_listen ~node_uri ~path ~of_yojson =
           match of_yojson json with
           | Ok output -> output
           | Error err -> raise (Request_parsing_error (Response_of_yojson err)))
-        body_stream in
+        body_stream
+    in
     await (Ok body_stream)
   | Error err -> await (Error err)

@@ -23,7 +23,7 @@ module Consensus : sig
       " ~signatures should be in the same order as the old validators "]
 
   type transaction =
-    | Deposit          of {
+    | Deposit of {
         ticket : Ticket_id.t;
         amount : Z.t;
         destination : Address.t;

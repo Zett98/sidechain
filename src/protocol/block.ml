@@ -24,7 +24,8 @@ let hash, verify =
         * BLAKE2B.t
         * Key_hash.t
         * int64
-        * Protocol_operation.t list] in
+        * Protocol_operation.t list]
+    in
     let json =
       to_yojson
         ( state_root_hash,
@@ -33,23 +34,28 @@ let hash, verify =
           previous_hash,
           author,
           block_height,
-          operations ) in
+          operations )
+    in
     let payload = Yojson.Safe.to_string json in
     let block_payload_hash = BLAKE2B.hash payload in
     let hash =
       Tezos.Deku.Consensus.hash_block ~block_height ~block_payload_hash
-        ~state_root_hash ~withdrawal_handles_hash ~validators_hash in
+        ~state_root_hash ~withdrawal_handles_hash ~validators_hash
+    in
     let hash = BLAKE2B.hash (BLAKE2B.to_raw_string hash) in
-    f (hash, block_payload_hash) in
+    f (hash, block_payload_hash)
+  in
   let hash = apply Fun.id in
   let verify ~hash:expected_hash =
-    apply (fun (hash, _payload_hash) -> hash = expected_hash) in
+    apply (fun (hash, _payload_hash) -> hash = expected_hash)
+  in
   (hash, verify)
 let make ~state_root_hash ~withdrawal_handles_hash ~validators_hash
     ~previous_hash ~author ~block_height ~operations =
   let hash, payload_hash =
     hash ~state_root_hash ~withdrawal_handles_hash ~validators_hash
-      ~previous_hash ~author ~block_height ~operations in
+      ~previous_hash ~author ~block_height ~operations
+  in
   {
     hash;
     payload_hash;
@@ -72,7 +78,8 @@ let of_yojson json =
         ~block_height:block.block_height ~operations:block.operations
     with
     | true -> Ok ()
-    | false -> Error "Invalid hash" in
+    | false -> Error "Invalid hash"
+  in
   Ok block
 let compare a b = BLAKE2B.compare a.hash b.hash
 let genesis =
@@ -85,7 +92,8 @@ let genesis =
 let produce ~state ~next_state_root_hash =
   let next_state_root_hash =
     Option.value ~default:state.Protocol_state.state_root_hash
-      next_state_root_hash in
+      next_state_root_hash
+  in
   make ~previous_hash:state.Protocol_state.last_block_hash
     ~state_root_hash:next_state_root_hash
     ~withdrawal_handles_hash:

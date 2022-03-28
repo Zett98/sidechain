@@ -69,7 +69,8 @@ let rec compile_expr ~stack gas next_ident vars code =
     let ident =
       let ident = !next_ident in
       next_ident := Ident.next ident;
-      ident in
+      ident
+    in
     let vars = Vars.add var ident vars in
     let body = compile_expr vars body in
     E_lam (ident, body)
@@ -104,7 +105,8 @@ let compile gas script =
   let param_ident, next_ident =
     let param_ident = Ident.initial in
     let next_ident = Ident.next param_ident in
-    (param_ident, ref next_ident) in
+    (param_ident, ref next_ident)
+  in
   let vars = Vars.add param param_ident Vars.empty in
 
   let code = compile_expr gas next_ident vars code in

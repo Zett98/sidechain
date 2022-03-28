@@ -97,14 +97,16 @@ let withdraw ~sender ~destination amount ticket t =
       (fun id ->
         let hash = Withdrawal_handle.hash ~id ~owner ~amount ~ticket in
         { id; hash; owner; amount; ticket })
-      t.withdrawal_handles in
+      t.withdrawal_handles
+  in
   let t =
     {
       ledger =
         t.ledger
         |> Address_and_ticket_map.add sender ticket (sender_balance - amount);
       withdrawal_handles;
-    } in
+    }
+  in
   Ok (t, handle)
 let withdrawal_handles_find_proof handle t =
   match

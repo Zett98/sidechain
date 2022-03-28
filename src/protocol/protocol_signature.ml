@@ -19,11 +19,13 @@ let to_yojson, of_yojson =
   end in
   let to_yojson t =
     Serialized_data.to_yojson
-      { signature = t.signature; public_key = t.public_key } in
+      { signature = t.signature; public_key = t.public_key }
+  in
   let of_yojson json =
     let%ok { signature; public_key } = Serialized_data.of_yojson json in
     let address = Key_hash.of_key public_key in
-    Ok { signature; public_key; address } in
+    Ok { signature; public_key; address }
+  in
   (to_yojson, of_yojson)
 let sign ~key:secret hash =
   let signature = Signature.sign secret hash in

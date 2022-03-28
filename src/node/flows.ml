@@ -68,7 +68,7 @@ let received_block' =
         | `Already_known_block
         | `Block_already_in_the_pool
         | `Block_not_signed_enough_to_apply
-        | `Invalid_block                           of string
+        | `Invalid_block of string
         | `Invalid_block_when_applying
         | `Invalid_state_root_hash
         | `Not_current_block_producer
@@ -97,7 +97,8 @@ let rec request_block_by_hash tries ~hash =
       let state = !get_state () in
       let validator_uri = find_random_validator_uri state in
       let%await block =
-        Networking.request_block_by_hash { hash } validator_uri in
+        Networking.request_block_by_hash { hash } validator_uri
+      in
       await (Option.get block))
     (fun _exn ->
       Printexc.print_backtrace stdout;
@@ -160,7 +161,8 @@ let request_previous_blocks state block =
 let try_to_produce_block state update_state =
   let%assert () =
     ( `Not_current_block_producer,
-      is_current_producer state ~key_hash:state.identity.t ) in
+      is_current_producer state ~key_hash:state.identity.t )
+  in
   let block = produce_block state in
   let signature = sign ~key:state.identity.secret block in
   let state = append_signature state update_state ~signature ~hash:block.hash in
@@ -186,11 +188,13 @@ let try_to_commit_state_hash ~prev_validators state block signatures =
            let signature = Signature.signature signature in
            (address, (key, signature)))
     |> List.to_seq
-    |> Address_map.of_seq in
+    |> Address_map.of_seq
+  in
   let validators =
     state.protocol.validators
     |> Validators.to_list
-    |> List.map (fun validator -> validator.Validators.address) in
+    |> List.map (fun validator -> validator.Validators.address)
+  in
   let signatures =
     prev_validators
     |> Validators.to_list
@@ -201,7 +205,8 @@ let try_to_commit_state_hash ~prev_validators state block signatures =
       let%await () =
         match state.identity.t = block.Block.author with
         | true -> Lwt.return_unit
-        | false -> Lwt_unix.sleep 120.0 in
+        | false -> Lwt_unix.sleep 120.0
+      in
       commit_state_hash state ~block_height:block.block_height
         ~block_payload_hash:block.payload_hash
         ~withdrawal_handles_hash:block.withdrawal_handles_hash
@@ -209,11 +214,13 @@ let try_to_commit_state_hash ~prev_validators state block signatures =
 let rec try_to_apply_block state update_state block =
   let%assert () =
     ( `Block_not_signed_enough_to_apply,
-      Block_pool.is_signed ~hash:block.Block.hash state.Node.block_pool ) in
+      Block_pool.is_signed ~hash:block.Block.hash state.Node.block_pool )
+  in
   let%assert () =
     ( `Invalid_state_root_hash,
       block_matches_current_state_root_hash state block
-      || block_matches_next_state_root_hash state block ) in
+      || block_matches_next_state_root_hash state block )
+  in
   let prev_protocol = state.protocol in
   let is_new_state_root_hash =
     not (BLAKE2B.equal state.protocol.state_root_hash block.state_root_hash)
@@ -247,20 +254,24 @@ and block_added_to_the_pool state update_state block =
     | Some signatures when Signatures.is_signed signatures ->
       let snapshots =
         Snapshots.append_block ~pool:state.Node.block_pool (block, signatures)
-          state.snapshots in
+          state.snapshots
+      in
       { state with snapshots }
     | Some _signatures -> state
-    | None -> state in
+    | None -> state
+  in
   if is_next state block then
     let state = try_to_sign_block state update_state block in
     try_to_apply_block state update_state block
   else
     let%assert () =
       ( `Added_block_not_signed_enough_to_desync,
-        Block_pool.is_signed ~hash:block.hash state.block_pool ) in
+        Block_pool.is_signed ~hash:block.hash state.block_pool )
+    in
     let%assert () =
       ( `Added_block_has_lower_block_height,
-        block.block_height > state.protocol.block_height ) in
+        block.block_height > state.protocol.block_height )
+    in
     match Block_pool.find_block ~hash:block.previous_hash state.block_pool with
     | Some block -> block_added_to_the_pool state update_state block
     | None ->
@@ -270,7 +281,8 @@ let () = block_added_to_the_pool' := block_added_to_the_pool
 let received_block state update_state block =
   let%ok () =
     is_valid_block state block
-    |> Result.map_error (fun msg -> `Invalid_block msg) in
+    |> Result.map_error (fun msg -> `Invalid_block msg)
+  in
   let%assert () =
     (`Already_known_block, not (is_known_block state ~hash:block.Block.hash))
   in
@@ -279,14 +291,16 @@ let received_block state update_state block =
 let () = received_block' := received_block
 let received_signature state update_state ~hash ~signature =
   let%assert () =
-    (`Invalid_signature_for_this_hash, Signature.verify ~signature hash) in
+    (`Invalid_signature_for_this_hash, Signature.verify ~signature hash)
+  in
   let%assert () =
     (`Already_known_signature, not (is_known_signature state ~hash ~signature))
   in
   let state = append_signature state update_state ~hash ~signature in
   let%assert () =
     ( `Added_signature_not_signed_enough_to_request,
-      Block_pool.is_signed ~hash state.Node.block_pool ) in
+      Block_pool.is_signed ~hash state.Node.block_pool )
+  in
   match Block_pool.find_block ~hash state.Node.block_pool with
   | Some block -> block_added_to_the_pool state update_state block
   | None ->
@@ -308,13 +322,16 @@ let parse_internal_tezos_transactions tezos_internal_transactions =
     tezos_internal_transactions
 let received_tezos_operation state update_state tezos_interop_operation =
   let open Protocol.Operation in
-  let Tezos_interop.Consensus.{ hash; transactions } = tezos_interop_operation in
+  let Tezos_interop.Consensus.{ hash; transactions } =
+    tezos_interop_operation
+  in
   let tezos_operation =
     Core.Tezos_operation.make
       {
         tezos_operation_hash = hash;
         internal_operations = parse_internal_tezos_transactions transactions;
-      } in
+      }
+  in
   let operation = Core_tezos tezos_operation in
   let (_ : State.t) =
     update_state
@@ -337,7 +354,8 @@ let received_user_operation state update_state user_operation =
         {
           state with
           pending_operations = operation :: state.pending_operations;
-        }) in
+        })
+    in
     ());
   Ok ()
 let received_consensus_operation state update_state consensus_operation
@@ -368,7 +386,8 @@ let request_nonce state update_state uri =
 let register_uri state update_state ~uri ~signature =
   let%ok nonce =
     Node.Uri_map.find_opt uri state.Node.uri_state
-    |> Option.to_result ~none:`Unknown_uri in
+    |> Option.to_result ~none:`Unknown_uri
+  in
   let%assert () =
     (`Invalid_nonce_signature, Signature.verify ~signature (BLAKE2B.hash nonce))
   in
@@ -380,7 +399,8 @@ let register_uri state update_state ~uri ~signature =
           Node.Address_map.add
             (Signature.address signature)
             uri state.validators_uri;
-      } in
+      }
+  in
   Ok ()
 let request_withdraw_proof state ~hash =
   match state.Node.recent_operation_receipts |> BLAKE2B.Map.find_opt hash with
@@ -392,11 +412,13 @@ let request_withdraw_proof state ~hash =
         Block_pool.find_block ~hash:last_block_hash state.Node.block_pool
       with
       | None -> assert false
-      | Some block -> block.Block.withdrawal_handles_hash in
+      | Some block -> block.Block.withdrawal_handles_hash
+    in
     let proof =
       state.Node.protocol.core_state
       |> Core.State.ledger
-      |> Ledger.withdrawal_handles_find_proof withdrawal_handle in
+      |> Ledger.withdrawal_handles_find_proof withdrawal_handle
+    in
     Ok { withdrawal_handles_hash; withdrawal_handle; proof }
 let request_ticket_balance state ~ticket ~address =
   state.Node.protocol.core_state
@@ -406,11 +428,13 @@ let trusted_validators_membership state update_state request =
   let open Networking.Trusted_validators_membership_change in
   let { signature; payload = { address; action } as payload } = request in
   let payload_hash =
-    payload |> payload_to_yojson |> Yojson.Safe.to_string |> BLAKE2B.hash in
+    payload |> payload_to_yojson |> Yojson.Safe.to_string |> BLAKE2B.hash
+  in
   let%assert () =
     ( `Invalid_signature_author,
       Key_hash.compare state.Node.identity.t (Signature.address signature) = 0
-    ) in
+    )
+  in
   let%assert () =
     (`Failed_to_verify_payload, payload_hash |> Signature.verify ~signature)
   in
@@ -422,10 +446,12 @@ let trusted_validators_membership state update_state request =
     | Remove ->
       Trusted_validators_membership_change.Set.add
         { action = Remove; address }
-        state.Node.trusted_validator_membership_change in
+        state.Node.trusted_validator_membership_change
+  in
   let (_ : State.t) =
     update_state
-      { state with trusted_validator_membership_change = new_validators } in
+      { state with trusted_validator_membership_change = new_validators }
+  in
   Lwt.async (fun () ->
       state.persist_trusted_membership_change
         (new_validators |> Trusted_validators_membership_change.Set.elements));

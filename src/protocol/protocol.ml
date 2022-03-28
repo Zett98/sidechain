@@ -16,12 +16,14 @@ let apply_core_tezos_operation state tezos_operation =
     ( `Duplicated_operation,
       not
         (Tezos_operation_set.mem tezos_operation state.included_tezos_operations)
-    ) in
+    )
+  in
   let included_tezos_operations =
     Tezos_operation_set.add tezos_operation state.included_tezos_operations
   in
   let core_state =
-    Core.State.apply_tezos_operation state.core_state tezos_operation in
+    Core.State.apply_tezos_operation state.core_state tezos_operation
+  in
   Ok { state with core_state; included_tezos_operations }
 let apply_core_tezos_operation state tezos_operation =
   match apply_core_tezos_operation state tezos_operation with
@@ -30,20 +32,25 @@ let apply_core_tezos_operation state tezos_operation =
 let apply_core_user_operation state user_operation =
   let Core_user.
         { hash = _; key = _; signature = _; nonce = _; block_height; data } =
-    user_operation in
+    user_operation
+  in
   let%assert () = (`Block_in_the_future, block_height <= state.block_height) in
   let%assert () =
     ( `Old_operation,
       Int64.add block_height maximum_old_block_height_operation
-      > state.block_height ) in
+      > state.block_height )
+  in
   let%assert () =
     ( `Duplicated_operation,
       not (User_operation_set.mem user_operation state.included_user_operations)
-    ) in
+    )
+  in
   let included_user_operations =
-    User_operation_set.add user_operation state.included_user_operations in
+    User_operation_set.add user_operation state.included_user_operations
+  in
   let core_state, receipt =
-    Core.State.apply_user_operation state.core_state data in
+    Core.State.apply_user_operation state.core_state data
+  in
   Ok ({ state with core_state; included_user_operations }, receipt)
 let apply_core_user_operation state tezos_operation =
   match apply_core_user_operation state tezos_operation with
@@ -56,7 +63,8 @@ let apply_consensus_operation state consensus_operation =
     match consensus_operation with
     | Consensus.Add_validator validator -> Validators.add validator validators
     | Consensus.Remove_validator validator ->
-      Validators.remove validator validators in
+      Validators.remove validator validators
+  in
   let last_seen_membership_change_timestamp = Unix.time () in
   { state with validators; last_seen_membership_change_timestamp }
 let is_next state block =
@@ -72,7 +80,8 @@ let apply_operation (state, receipts) operation =
     let receipts =
       match receipt with
       | Some receipt -> (user_operation.hash, receipt) :: receipts
-      | None -> receipts in
+      | None -> receipts
+    in
     (state, receipts)
   | Consensus consensus_operation ->
     let state = apply_consensus_operation state consensus_operation in
@@ -80,7 +89,8 @@ let apply_operation (state, receipts) operation =
 let apply_block state block =
   Format.eprintf "\027[32mblock: %Ld\027[m\n%!" block.Block.block_height;
   let state, receipts =
-    List.fold_left apply_operation (state, []) block.operations in
+    List.fold_left apply_operation (state, []) block.operations
+  in
   let state =
     {
       state with
@@ -89,7 +99,8 @@ let apply_block state block =
         |> User_operation_set.filter (fun op ->
                Int64.sub state.block_height op.block_height
                <= maximum_stored_block_height);
-    } in
+    }
+  in
   ( {
       state with
       block_height = block.block_height;
@@ -118,7 +129,8 @@ let make ~initial_block =
       last_state_root_update = 0.0;
       last_applied_block_timestamp = 0.0;
       last_seen_membership_change_timestamp = 0.0;
-    } in
+    }
+  in
   apply_block empty initial_block |> fst
 let apply_block state block =
   let%assert () = (`Invalid_block_when_applying, is_next state block) in

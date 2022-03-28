@@ -224,19 +224,22 @@ let () =
       test "invalid key" (fun { expect; _ } ->
           let secret, key =
             let secret, key = Ed25519.generate () in
-            (Secret.Ed25519 secret, Key.Ed25519 key) in
+            (Secret.Ed25519 secret, Key.Ed25519 key)
+          in
           let edsig_from_key = sign secret tuturu in
           (expect.bool (verify key edsig_from_key tuturu)).toBeTrue ();
           (expect.bool (verify edpk edsig_from_key tuturu)).toBeFalse ();
           let secret, key =
             let secret, key = Crypto.Secp256k1.generate () in
-            (Secret.Secp256k1 secret, Key.Secp256k1 key) in
+            (Secret.Secp256k1 secret, Key.Secp256k1 key)
+          in
           let pksig_from_key = sign secret tuturu in
           (expect.bool (verify key pksig_from_key tuturu)).toBeTrue ();
           (expect.bool (verify sppk pksig_from_key tuturu)).toBeFalse ();
           let secret, key =
             let secret, key = Crypto.P256.generate () in
-            (Secret.P256 secret, Key.P256 key) in
+            (Secret.P256 secret, Key.P256 key)
+          in
           let p2sig_from_key = sign secret tuturu in
           (expect.bool (verify key p2sig_from_key tuturu)).toBeTrue ();
           (expect.bool (verify p2pk p2sig_from_key tuturu)).toBeFalse ());
@@ -337,7 +340,8 @@ let () =
       let tz2 = Implicit (Key_hash.of_key TZ2_ex.pk) in
       let tz3 = Implicit (Key_hash.of_key TZ3_ex.pk) in
       let kt1 =
-        Originated { contract = some_contract_hash; entrypoint = None } in
+        Originated { contract = some_contract_hash; entrypoint = None }
+      in
       let kt1_tuturu =
         Originated { contract = some_contract_hash; entrypoint = Some "tuturu" }
       in
@@ -418,7 +422,8 @@ let () =
       let open Operation_hash in
       let op =
         of_string "opCAkifFMh1Ya2J4WhRHskaXc297ELtx32wnc2WzeNtdQHp7DW4"
-        |> Option.get in
+        |> Option.get
+      in
       test "to_string" (fun { expect; _ } ->
           (expect.string (to_string op)).toEqual
             "opCAkifFMh1Ya2J4WhRHskaXc297ELtx32wnc2WzeNtdQHp7DW4");
@@ -465,8 +470,10 @@ let () =
             content = Transaction { amount; destination; entrypoint; value };
             gas_limit;
             storage_limit;
-          } in
-        Tezos.Operation.forge ~secret ~branch ~operations:[operation] in
+          }
+        in
+        Tezos.Operation.forge ~secret ~branch ~operations:[operation]
+      in
       test "same result as taquito" (fun { expect; _ } ->
           let forged_bytes =
             forge_transaction
@@ -475,7 +482,8 @@ let () =
               ~destination:"tz1ULf5uGJXefx8c8iLfHfuW1doMPpVicg7u"
               ~source:"tz1M6iKVFN8RhHjVSL3oF75nF2FJ1yMkrk5t" ~counter:3305389
               ~secret:"edsk4RbgwutwsEdVNuJsE5JDsxeJ6qFcG8F5rKFGnj5finT6FV46sd"
-              ~entrypoint:"default" ~value:Michelson.unit in
+              ~entrypoint:"default" ~value:Michelson.unit
+          in
           let taquito_forged_bytes =
             "3d95683f0d29a6deb044f4ecd86efd9cbae6b373b7b9d7c2db16456783e664566c001004051072b588b39e25b9f4dbf4673abcd63147bb03addfc901f00b0080897a00005f70062003e798791cb04f51bcec1d3358ac64a600468a797b657cff8b585c18cb599443d7c0982220cfa9231270138c7a3e0996d8ea42a2912d51c44681877b2d3a3e8051ebd1498305f8f73cf68967f60349fc00"
           in
@@ -488,7 +496,8 @@ let () =
               ~destination:"KT1GAr6WWLeavRVHgxEJq1F7tNLzavCLu9YB"
               ~source:"tz1M6iKVFN8RhHjVSL3oF75nF2FJ1yMkrk5t" ~counter:3305396
               ~secret:"edsk4RbgwutwsEdVNuJsE5JDsxeJ6qFcG8F5rKFGnj5finT6FV46sd"
-              ~entrypoint:"default" ~value:Michelson.unit in
+              ~entrypoint:"default" ~value:Michelson.unit
+          in
           let taquito_forged_bytes =
             "f6e43992b2f45aedbfdc7f5f6a21aa68c99973afffa0ddbe8b98e33672dec6396c001004051072b588b39e25b9f4dbf4673abcd63147a403b4dfc901970a000001533ace00d71497d23fdac2a8809bb1e9df14c579000048a432efc5ef0e700c2f696957996e90194787995d43826b18ade1823d05857f35787f4e7a223d3ea226f22b1809ee56a9046bd313f547e3746fb46bc8ed3803"
           in
@@ -499,7 +508,8 @@ let () =
       let test name input output =
         test name (fun { expect; _ } ->
             let (`Hex result) = to_bytes input |> Hex.of_bytes in
-            (expect.string result).toEqual output) in
+            (expect.string result).toEqual output)
+      in
       let int n = int (Z.of_int n) in
       let bytes s = bytes (Bytes.of_string (Hex.to_string (`Hex s))) in
       test "int(1)" (int 1) "050001";
@@ -561,7 +571,8 @@ let () =
               key_hash_exn "tz1d6QHk2oFzrYYasZWof8BU26D7jXAXeajv";
               key_hash_exn "tz1da6gqyddChGTwzW5aUA3Bia7DaAXmtqAE";
             ]
-            |> hash_validators in
+            |> hash_validators
+          in
           let hash = BLAKE2B.to_string hash in
           (expect.string hash).toEqual
             "6d6ecacbc858e3a89d87f0d9bd76b0c11b07aa95191129104395d17c6c96d36b");
@@ -590,7 +601,8 @@ let () =
               ~owner:(address_exn "tz1YywYq77UAMbVgoYndnZLkRawjUhX3nVh4")
               ~amount:(Z.of_int 10)
               ~ticketer:(address_exn "KT1AS9rCk1wpybsvZ5Tnd4yRxDvtN39uxMoq")
-              ~data:(Bytes.of_string "") in
+              ~data:(Bytes.of_string "")
+          in
           let hash = BLAKE2B.to_string hash in
           (expect.string hash).toEqual
             "63dfd90ec7be98a9c23bf374692de4d36f41fe03c4c768fc0c650641d3ed4f86"))
@@ -600,6 +612,7 @@ let () =
       let secret = genesis_key in
       test "sign" (fun { expect; _ } ->
           let signature =
-            sign secret ~nonce:1L (Uri.of_string "http://localhost") in
+            sign secret ~nonce:1L (Uri.of_string "http://localhost")
+          in
           (expect.string (Signature.to_string signature)).toEqual
             "edsigtpGEA7XKPKMFkFiEA6SfJaaha4Ai2XbteJG5FYvuMtMRyPnXRuZNi54P7BWvV6GaWTijf8EBjGb8MZZvdTrWCGFCVCXL7r"))

@@ -16,24 +16,29 @@ let () =
               Random.generate 20
               |> Cstruct.to_string
               |> BLAKE2B_20.of_raw_string
-              |> Option.get in
+              |> Option.get
+            in
             Address.Originated { contract = random_hash; entrypoint = None }
         in
         let data =
           match data with
           | Some data -> data
-          | None -> Random.generate 256 |> Cstruct.to_bytes in
+          | None -> Random.generate 256 |> Cstruct.to_bytes
+        in
         let open Ticket_id in
-        { ticketer; data } in
+        { ticketer; data }
+      in
       let make_address () =
         let _secret, _key, key_hash = Key_hash.make_ed25519 () in
-        key_hash in
+        key_hash
+      in
       let make_tezos_address () =
         let open Crypto in
         let open Tezos in
         let _key, address = Ed25519.generate () in
         let hash = Ed25519.Key_hash.of_key address in
-        Address.Implicit (Ed25519 hash) in
+        Address.Implicit (Ed25519 hash)
+      in
       let setup_two () =
         let t1 = make_ticket () in
         let t2 = make_ticket () in
@@ -44,14 +49,17 @@ let () =
           |> deposit a (Amount.of_int 100) t1
           |> deposit a (Amount.of_int 300) t2
           |> deposit b (Amount.of_int 200) t1
-          |> deposit b (Amount.of_int 400) t2 in
-        (t, (t1, t2), (a, b)) in
+          |> deposit b (Amount.of_int 400) t2
+        in
+        (t, (t1, t2), (a, b))
+      in
       let test name f =
         test name (fun { expect; _ } ->
             let expect_balance address ticket expected t =
               expect.equal (Amount.of_int expected) (balance address ticket t)
             in
-            f expect expect_balance) in
+            f expect expect_balance)
+      in
       test "amount" (fun expect _ ->
           expect.equal
             (let open Amount in

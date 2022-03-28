@@ -53,7 +53,8 @@ let test_op2_value_is_not_int64 () =
 
 let test_if_value_is_not_int64 () =
   let script =
-    [%lambda_vm.script fun _ -> if (0L, 0L) then 1L else (1L, (0L, 0L))] in
+    [%lambda_vm.script fun _ -> if (0L, 0L) then 1L else (1L, (0L, 0L))]
+  in
   check_execution_error
     (Vm_test.execute_ast 1601 (Int64 0L) script)
     `Value_is_not_int64

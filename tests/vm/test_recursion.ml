@@ -9,7 +9,8 @@ let factorial =
 let test_factorial =
   let rec fac = function
     | 0L -> 1L
-    | n -> Int64.(mul n (fac (sub n 1L))) in
+    | n -> Int64.(mul n (fac (sub n 1L)))
+  in
   QCheck_alcotest.to_alcotest
     QCheck.(
       Test.make ~name:"Recursion with factorial" ~count:10000 (1 -- 26)
@@ -20,7 +21,8 @@ let test_factorial =
           let expected_result =
             Vm_test.compile_value_exn
               (Gas.make ~initial_gas:101)
-              (Int64 (fac x)) in
+              (Int64 (fac x))
+          in
           expected_result = result.storage))
 
 let fibonacci =
@@ -38,17 +40,20 @@ let test_fibonacci =
     | 0L
     | 1L ->
       1L
-    | n -> Int64.add (fib (Int64.sub n 1L)) (fib (Int64.sub n 2L)) in
+    | n -> Int64.add (fib (Int64.sub n 1L)) (fib (Int64.sub n 2L))
+  in
   QCheck_alcotest.to_alcotest
     QCheck.(
       Test.make ~name:"Fibonacci" ~count:100 (0 -- 25) (fun x ->
           let x = Int64.of_int x in
           let result =
-            Vm_test.execute_ast_exn 100000000000 (Int64 x) fibonacci in
+            Vm_test.execute_ast_exn 100000000000 (Int64 x) fibonacci
+          in
           let expected_value =
             Vm_test.compile_value_exn
               (Gas.make ~initial_gas:101)
-              (Int64 (fib x)) in
+              (Int64 (fib x))
+          in
           expected_value = result.storage))
 
 let counter =

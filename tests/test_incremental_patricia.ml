@@ -18,7 +18,8 @@ let () =
             let tree, value = add make tree in
             let _, stored_value = find value.key tree |> Option.get in
             expect.equal value stored_value;
-            tree in
+            tree
+          in
           let size = 1 in
           let tree =
             List.init size (fun _ -> ()) |> List.fold_left add_and_test empty
