@@ -3,7 +3,10 @@
   "esy": {
     "build": "dune build -p #{self.name}",
     "release": {
-      "bin": ["deku-cli", "deku-node"]
+      "bin": [
+        "deku-cli",
+        "deku-node"
+      ]
     },
     "buildEnv": {
       "PATH": "%{localStore}%/../bin:$PATH"
@@ -193,7 +196,7 @@
       "override": {
         "dependencies": {
           "@opam/prometheus": "1.1",
-          "@opam/cmdliner" : "1.0.4"
+          "@opam/cmdliner": "1.0.4"
         }
       }
     },
