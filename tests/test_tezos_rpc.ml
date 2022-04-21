@@ -86,10 +86,10 @@ let fetch_constants ~block_hash () =
 
 (* to run a test, just uncomment it *)
 let tests =
-  [ (* fetch_block_operations ~block_hash:None; *)
-    (* listen_to_chain_heads; *)
-    (* listen_to_blocks; *)
-    (* fetch_block_header ~block_hash:None; *)
-    (* fetch_constants ~block_hash:None; *) ]
+  [ (* fetch_block_operations ~block_hash:None;
+       listen_to_chain_heads;
+       listen_to_blocks;
+       fetch_block_header ~block_hash:None;
+       fetch_constants ~block_hash:None; *) ]
 
 let () = Lwt_list.iter_s (fun test -> test ()) tests |> Lwt_main.run

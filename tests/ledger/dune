@@ -1,0 +1,5 @@
+(test
+ (name test_ledger)
+ (libraries crypto core alcotest qcheck-alcotest)
+ (preprocess
+  (pps ppx_deriving_yojson ppx_deriving.eq)))
