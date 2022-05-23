@@ -1,22 +1,56 @@
-module Contract : sig
+module Errors : sig
+  type t =
+    [ `Initialization_error
+    | `Module_validation_error
+    | `Execution_error ]
+  [@@deriving show]
+end
+
+module Value : sig
   type t
 
-  val make : storage:bytes -> code:string -> (t, string) result
-  (** [make ~storage ~code] creates new contract instance with [storage] and [code]. 
-        [storage] can be the initial storage of the updated one
-        and [code] is a WebAssembly Text Format for now. *)
+  val i32 : int32 -> t
+
+  val i64 : int64 -> t
+
+  val f32 : float -> t
+
+  val f64 : float -> t
+
+  val to_int32 : t -> int32 option
+
+  val to_int64 : t -> int64 option
+
+  val to_f32 : t -> float option
+
+  val to_f64 : t -> float option
+end
+
+module Memory : sig
+  type t
+  val load : t -> address:int64 -> int
+  val store_bytes : t -> address:int64 -> content:bytes -> unit
+  val load_bytes : t -> address:int64 -> size:int -> bytes
+end
+
+module Module : sig
+  type t
+  val of_string : gas:int ref -> code:string -> (t, Errors.t) result
+  val encode : t -> (string, string) result
+  val decode : string -> (t, string) result
 end
 
 module Runtime : sig
-  type t
-
-  val make : contract:Contract.t -> int ref -> t
-  (** [make contract gas] instantiates a new contract runtime to be invoked. *)
-
-  val invoke : t -> int ref -> bytes -> (bytes, string) result
+  val invoke :
+    (Memory.t -> int64 -> unit) ->
+    module_:Module.t ->
+    gas:int ref ->
+    argument:bytes ->
+    storage:bytes ->
+    (bytes, Errors.t) result
   (** [invoke runtime gas argument] invokes the entrypoint of the contract
         with a given argument.
-        
+
         The contract will receive two arguments: a pointer to the argument
         in memory and a pointer to the storage. The contract should return
         the size of the new storage that should be on the same place as before. *)
