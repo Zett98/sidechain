@@ -9,6 +9,7 @@ let body fmtr =
   (import "env" "pair" (func $pair (param i32 i32) (result i32)))
   (import "env" "car" (func $car (param i32) (result i32)))
   (import "env" "cdr" (func $cdr (param i32) (result i32)))
+  (import "env" "z_make" (func $z_make (param i32) (result i32)))
   (import "env" "z_add" (func $z_add (param i32 i32) (result i32)))
   (import "env" "z_sub" (func $z_sub (param i32 i32) (result i32)))
   (import "env" "nil" (func $nil (result i32)))
@@ -87,7 +88,8 @@ module Mapper = struct
     call $dup
     call $car 
     |}
-    | I_PUSH, [_; Int (_, x)] -> Format.sprintf "i32.const %d" (Z.to_int x)
+    | I_PUSH, [_; Int (_, x)] ->
+      Format.sprintf "i32.const %d\ncall $z_make" (Z.to_int x)
     | I_IF_LEFT, [Seq (_, x); Seq (_, y)] ->
       Format.asprintf
         {|
@@ -278,6 +280,13 @@ let make ~gas ~module_ ~custom =
       incrr counter;
       Some [Values.Num (I32 ret)] in
     Externs.[func ([I32; I32], Some [I32]) adder] in
+  let[@warning "-8"] z_make =
+    let adder _ [Values.Num (I32 one)] =
+      empty := M.add !counter (Num (Z.of_int32 one)) !empty;
+      let ret = !counter in
+      incrr counter;
+      Some [Values.Num (I32 ret)] in
+    Externs.[func ([I32], Some [I32]) adder] in
   let[@warning "-8"] car =
     let adder _ [Values.Num (I32 one)] =
       let[@warning "-8"] (Pair (ret, _)) = M.find one !empty in
@@ -307,7 +316,7 @@ let make ~gas ~module_ ~custom =
         (Externs.to_wasm (fun () ->
              let instance = Set_once.get_exn uninit Lexing.dummy_pos in
              get_memory instance))
-      (unpair @ pair @ car @ cdr @ z_add @ z_sub @ nil) in
+      (unpair @ pair @ car @ cdr @ z_make @ z_add @ z_sub @ nil) in
   let instance = Eval.init gas module_ imports in
   (* XXX: Is this the better way of doing this? *)
   Set_once.set_exn uninit Lexing.dummy_pos instance;
