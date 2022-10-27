@@ -66,6 +66,11 @@ let empty_module_inst =
     gas_limit = I64.zero;
   }
 
+let[@inline always] burn_gas t amount =
+  if I64.(gt_u t.gas_limit amount) then
+    t.gas_limit <- Int64.(sub t.gas_limit amount)
+  else raise (Out_of_gas (Source.no_region, "out of gas"))
+
 let set_gas_limit t limit = t.gas_limit <- limit
 let get_gas_limit t = t.gas_limit
 

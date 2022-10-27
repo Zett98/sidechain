@@ -84,11 +84,6 @@ let data (inst : module_inst) x = lookup "data segment" inst.datas x
 let local (frame : frame) x = lookup "local" frame.locals x
 let inst frame = frame.inst
 
-let[@inline always] burn_gas t amount =
-  if I64.(gt_u t.gas_limit amount) then
-    t.gas_limit <- I64.(sub_sat_u t.gas_limit amount)
-  else raise (Out_of_gas (Source.no_region, "out of gas"))
-
 let any_ref inst x i at =
   try Table.load (table inst x) i
   with Table.Bounds -> Trap.error at ("undefined element " ^ Int32.to_string i)
@@ -148,7 +143,7 @@ let elem_oob frame x i n =
 
 let rec step (c : config) : config =
   let { frame; code = vs, es; _ } = c in
-  burn_gas (inst frame) 100L;
+  Instance.burn_gas (inst frame) 100L;
   let e = List.hd es in
   let vs', es' =
     match (e.it, vs) with
@@ -622,7 +617,7 @@ let rec step (c : config) : config =
             in
             (vs', [ Frame (n2, frame', ([], instr')) @@ e.at ])
         | Func.HostFunc (t, f) -> (
-            try (List.rev (f (List.rev args)) @ vs', [])
+            try (List.rev (f (ref (inst frame)) (List.rev args)) @ vs', [])
             with Crash (_, msg) -> Crash.error e.at msg))
   in
   { c with code = (vs', es' @ List.tl es) }
@@ -636,13 +631,25 @@ let rec eval (c : config) : value stack =
 (* Functions & Constants *)
 
 let invoke (func : func_inst) (vs : value list) : value list =
-  let at = match func with Func.AstFunc (_, _, f) -> f.at | _ -> no_region in
+  let at =
+    match func with Func.AstFunc (_, inst, f) -> f.at | _ -> no_region
+  in
+  let gas =
+    match func with
+    | Func.AstFunc (_, inst, _) -> Instance.get_gas_limit !inst
+    | _ -> Int64.max_int
+  in
   let (FuncType (ins, out)) = Func.type_of func in
   if List.length vs <> List.length ins then
     Crash.error at "wrong number of arguments";
   if not (List.for_all2 (fun v -> ( = ) (type_of_value v)) vs ins) then
     Crash.error at "wrong types of arguments";
-  let c = config empty_module_inst (List.rev vs) [ Invoke func @@ at ] in
+  let c =
+    config
+      { empty_module_inst with gas_limit = gas }
+      (List.rev vs)
+      [ Invoke func @@ at ]
+  in
   try List.rev (eval c)
   with Stack_overflow -> Exhaustion.error at "call stack exhausted"
 
@@ -823,12 +830,13 @@ let init (m : module_) (exts : (Utf8.t * extern) list) ~gas_limit : module_inst
   } =
     m.it
   in
-  if List.length exts <> List.length imports then
-    Link.error m.at "wrong number of imports provided for initialisation";
+  (* if List.length exts <> List.length imports then
+     Link.error m.at "wrong number of imports provided for initialisation"; *)
   let inst0 =
     {
       (add_imports m exts imports empty_module_inst) with
       types = List.map (fun type_ -> type_.it) types;
+      gas_limit;
     }
   in
   let fs = List.map (create_func inst0) funcs in
@@ -847,7 +855,6 @@ let init (m : module_) (exts : (Utf8.t * extern) list) ~gas_limit : module_inst
       exports = List.map (create_export inst2) exports;
       elems = List.map (create_elem inst2) elems;
       datas = List.map (create_data inst2) datas;
-      gas_limit;
     }
   in
   List.iter (init_func inst) fs;
