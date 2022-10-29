@@ -1,6 +1,8 @@
 open Deku_ledger
 
-type t [@@deriving eq, ord, show]
+exception Not_a_state
+
+type t [@@deriving eq, ord, show, yojson]
 
 val empty : t
 val add_contract : t -> Contract_address.t -> State_entry.t -> t

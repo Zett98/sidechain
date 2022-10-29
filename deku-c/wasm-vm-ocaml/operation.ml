@@ -1,7 +1,11 @@
 open Deku_ledger
 open Deku_concepts
 
-type t = { operation : Operations.t; tickets : (Ticket_id.t * Amount.t) list }
+type t = {
+  operation : Operations.t;
+  tickets : (Ticket_id.t * Amount.t) list; [@opaque]
+}
+[@@deriving yojson, show]
 
 let encoding =
   let open Data_encoding in

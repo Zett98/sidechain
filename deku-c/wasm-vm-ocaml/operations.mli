@@ -11,6 +11,6 @@ type t =
       entrypoints : Entrypoints.t;
       constants : (int * Value.t) array;
     }
-[@@deriving show]
+[@@deriving show, yojson]
 
 val encoding : t Data_encoding.t

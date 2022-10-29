@@ -25,9 +25,7 @@ let apply raw_operation_hash state table tickets op =
           let s = Hex.to_string (`Hex module_) in
           let res = Wasm.Decode.decode "" s in
           res.it
-        with Wasm.Decode.Code (_, s) ->
-          print_endline s;
-          raise (Runtime `Decode)
+        with Wasm.Decode.Code (_, _) -> raise (Runtime `Decode)
       in
       let entry =
         State_entry.make ~entrypoints ~constants
@@ -37,6 +35,8 @@ let apply raw_operation_hash state table tickets op =
       let address =
         Deku_ledger.Contract_address.of_user_operation_hash raw_operation_hash
       in
+      deposit_tickets
+        (Deku_ledger.Address.of_contract_address (address, None), tickets);
       (State.add_contract state address entry, [])
   | Call { address; argument } -> (
       let address', entrypoint =
@@ -74,6 +74,7 @@ let apply raw_operation_hash state table tickets op =
         in
         match entrypoint with
         | None -> argument
+        | Some x when x = "" -> argument
         | Some x ->
             let path =
               match Entrypoints.get_path entrypoints x with

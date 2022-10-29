@@ -37,15 +37,18 @@ let originate =
 let invoke =
   let open Ocaml_wasm_vm in
   let open Deku_ledger in
-  Operations.Call
-    {
-      address =
-        Address.of_contract_address
-          ( Contract_address.of_user_operation_hash
-              (Deku_crypto.BLAKE2b.hash "tutturu"),
-            Some {|%increment|} );
-      argument = Int (Z.of_int 5);
-    }
+  let res =
+    Operations.Call
+      {
+        address =
+          Address.of_contract_address
+            ( Contract_address.of_user_operation_hash
+                (Deku_crypto.BLAKE2b.hash "tutturu"),
+              None );
+        argument = Union (Left (Union (Right (Int (Z.of_int 5)))));
+      }
+  in
+  res
 
 let new_address () =
   let open Deku_crypto in
@@ -72,9 +75,6 @@ let () =
                   ~tickets:[]
                   Env.
                     {
-                      self =
-                        Contract_address.of_user_operation_hash
-                          (Deku_crypto.BLAKE2b.hash "tutturu");
                       source = addr;
                       sender = addr;
                       ledger = Deku_ledger.Ledger.initial;
@@ -97,9 +97,6 @@ let () =
                   ~tickets:[]
                   Env.
                     {
-                      self =
-                        Contract_address.of_user_operation_hash
-                          (Deku_crypto.BLAKE2b.hash "tutturu");
                       source = addr;
                       sender = addr;
                       ledger = Deku_ledger.Ledger.initial;

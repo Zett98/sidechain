@@ -31,8 +31,7 @@ let originate contract init =
             initial_storage = init;
           };
     }
-  |> Data_encoding.Json.construct Operation.encoding
-  |> Data_encoding.Json.to_string |> print_endline
+  |> Operation.yojson_of_t |> Yojson.Safe.to_string |> print_endline
 
 let invoke address arg =
   let tickets, init = Tunac.Compiler.compile_value arg |> Result.get_ok in
@@ -47,8 +46,7 @@ let invoke address arg =
             argument = init;
           };
     }
-  |> Data_encoding.Json.construct Operation.encoding
-  |> Data_encoding.Json.to_string |> print_endline
+  |> Operation.yojson_of_t |> Yojson.Safe.to_string |> print_endline
 
 open Core
 

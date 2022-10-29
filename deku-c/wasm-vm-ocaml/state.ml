@@ -1,6 +1,8 @@
 open Deku_ledger
 module Table = Map.Make (Contract_address)
 
+exception Not_a_state
+
 type t = State : State_entry.t Table.t -> t [@@unboxed] [@@deriving eq, ord]
 
 let show (State t) =
@@ -18,3 +20,27 @@ let pp fmt (State t) =
 
 let add_contract (State t) address entry = State (Table.add address entry t)
 let fetch_contract (State t) address = Table.find address t
+
+let encoding =
+  let open Data_encoding in
+  conv
+    (function State x -> Table.bindings x)
+    (function lst -> State (Table.of_seq @@ List.to_seq lst))
+    (list
+       (tup2
+          (dynamic_size Contract_address.encoding)
+          (dynamic_size State_entry.encoding)))
+
+let yojson_of_t t =
+  `String
+    (Data_encoding.Json.construct encoding t |> Data_encoding.Json.to_string)
+
+let t_of_yojson t =
+  match t with
+  | `String string -> (
+      try
+        Data_encoding.Json.from_string string
+        |> Result.map (fun x -> Data_encoding.Json.destruct encoding x)
+        |> Result.get_ok
+      with Invalid_argument _ -> raise Not_a_state)
+  | _ -> raise Not_a_state

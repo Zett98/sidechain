@@ -4,13 +4,15 @@ module Ledger = Deku_ledger.Ledger
 open Deku_stdlib
 
 type t = {
-  self : Contract_address.t;
   sender : Address.t;
   source : Address.t;
   mutable ledger : Ledger.t;
   mutable state : State.t;
   mutable ticket_table : Ticket_table.t;
 }
+
+let make ~state ~ledger ~sender ~source =
+  { sender; source; ledger; state; ticket_table = Ticket_table.init [] }
 
 let rec execute t ~operation_hash ~tickets ~operation =
   let _ = t in
@@ -20,6 +22,18 @@ let rec execute t ~operation_hash ~tickets ~operation =
   let call_indirect_unit = ref (fun _ _ -> assert false) in
   let push = ref (fun _ -> assert false) in
   let constants = ref [||] in
+  let%ok self =
+    try
+      match operation with
+      | Operations.Call { address; _ } ->
+          let res =
+            Deku_ledger.Address.to_contract_address address
+            |> Option.map fst |> Option.get
+          in
+          Ok (ref (fun () -> res))
+      | _ -> Ok (ref (fun () -> failwith "lifecycle error"))
+    with Invalid_argument s -> Error s
+  in
   let%ok state, ops =
     try
       Effect.Deep.match_with
@@ -57,15 +71,13 @@ let rec execute t ~operation_hash ~tickets ~operation =
                     in
                     t.ledger <- ledger;
                     Some (fun (k : (a, _) continuation) -> continue k ())
-                | Take_tickets _ ->
+                | Take_tickets addr ->
                     let ledger, tickets =
                       Ledger.with_ticket_table t.ledger
                         (fun ~get_table ~set_table ->
                           let tickets, table =
                             Deku_ledger.Ticket_table.take_all_tickets
-                              (get_table ())
-                              ~sender:
-                                (Address.of_contract_address (t.self, None))
+                              (get_table ()) ~sender:addr
                           in
                           ( set_table table,
                             Seq.fold_left
@@ -76,7 +88,8 @@ let rec execute t ~operation_hash ~tickets ~operation =
                     t.ledger <- ledger;
                     Some (fun (k : (a, _) continuation) -> continue k tickets)
                 | Self_addr ->
-                    Some (fun (k : (a, _) continuation) -> continue k t.self)
+                    Some
+                      (fun (k : (a, _) continuation) -> continue k (!self ()))
                 | Sender_address ->
                     Some (fun (k : (a, _) continuation) -> continue k t.sender)
                 | Source_address ->
@@ -194,7 +207,7 @@ let rec execute t ~operation_hash ~tickets ~operation =
                       execute
                         {
                           acc with
-                          sender = Address.of_contract_address (acc.self, None);
+                          sender = Address.of_contract_address (!self (), None);
                         }
                         ~operation_hash ~tickets
                         ~operation:
@@ -209,3 +222,5 @@ let rec execute t ~operation_hash ~tickets ~operation =
     with Failure s -> Error s
   in
   Ok new_state
+
+let finalize = function Ok t -> Ok (t.state, t.ledger) | Error _ as x -> x
