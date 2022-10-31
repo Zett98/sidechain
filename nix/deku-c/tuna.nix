@@ -11,6 +11,7 @@
   tezos-micheline,
   core,
   core_unix,
+  core_bench,
   ppx_jane,
   alcotest,
 }:
@@ -41,6 +42,7 @@ buildDunePackage rec {
     yojson
     core
     core_unix
+    core_bench
     ppx_jane
   ];
 
