@@ -1,0 +1,9 @@
+(executable
+ (name bench)
+ (libraries
+  ocaml_wasm_vm
+  wasm
+  core
+  core_unix
+  core_unix.command_unix
+  core_bench))
